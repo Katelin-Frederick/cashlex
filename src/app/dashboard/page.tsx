@@ -14,9 +14,6 @@ const page = () => {
         <li className="text-blue-800 underline">
           <Link href="/register">Register</Link>
         </li>
-        <li className="text-blue-800 underline">
-          <Link href="/login">Logout</Link>
-        </li>
       </ul>
 
       <Dashboard />

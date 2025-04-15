@@ -1,8 +1,8 @@
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { type DefaultSession, type NextAuthConfig } from "next-auth";
+import GitHubProvider from 'next-auth/providers/github'
 import Credentials from "next-auth/providers/credentials";
 import { eq, } from 'drizzle-orm'
-import { ZodError } from "zod";
 import bcrypt from 'bcrypt'
 
 import { db } from "~/server/db";
@@ -40,6 +40,10 @@ declare module "next-auth" {
  */
 export const authConfig = {
   providers: [
+    GitHubProvider({
+      clientId: process.env.GITHUB_CLIENT_ID!,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+    }),
     Credentials({
       credentials: {
         username: {},
@@ -67,8 +71,8 @@ export const authConfig = {
 
         return {
           id: foundUser.id,
-          username: foundUser.username,
-          email: 'test@test.com'
+          name: foundUser.username,
+          email: foundUser.email
         }
       },
     }),

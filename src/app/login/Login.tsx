@@ -96,6 +96,7 @@ const Login = () => {
           />
 
           <Button type="submit">Login</Button>
+          <Button onClick={() => signIn('github')}>Sign In with Github</Button>
         </form>
       </Form>
     </div>

@@ -12,32 +12,33 @@ export const authRouter = createTRPCRouter({
     .input(
       z.object({
         username: z.string().min(2),
+        email: z.string().email(),
         password: z.string().min(8),
       })
     )
-    .mutation(async ({ input, }) => {
-      const { username, password, } = input
+    .mutation(async ({ input }) => {
+      const { username, email, password } = input;
 
-      // 🔁 Updated check for existing user using select + where
       const existingUser = await db
         .select()
         .from(users)
-        .where(eq(users.username, username))
+        .where(eq(users.username, username));
 
       if (existingUser.length > 0) {
         throw new TRPCError({
           code: 'CONFLICT',
           message: 'Username already exists',
-        })
+        });
       }
 
-      const hashedPassword = await bcrypt.hash(password, 10)
+      const hashedPassword = await bcrypt.hash(password, 10);
 
       await db.insert(users).values({
         username,
+        email,
         passwordHash: hashedPassword,
-      })
+      });
 
-      return { success: true, }
-    }),
+      return { success: true };
+    })
 })

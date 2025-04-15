@@ -1,7 +1,6 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
@@ -33,36 +32,24 @@ const Register = () => {
     username: z.string().min(2, {
       message: "Username must be at least 2 characters.",
     }),
-    password: z.string({ required_error: "Password is required" })
-      .min(1, "Password is required")
-      .min(8, "Password must be more than 8 characters")
+    email: z.string().email({ message: "Invalid email address" }),
+    password: z.string()
+      .min(8, "Password must be at least 8 characters")
       .max(32, "Password must be less than 32 characters"),
-  })
+  });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       username: "",
+      email: "",
       password: "",
     },
   })
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    const { username, password } = values
-
-    if (!username || !password) {
-      console.log('Username and password are required.')
-      return
-    }
-
-    try {
-      await registerMutation.mutateAsync({
-        username,
-        password,
-      })
-    } catch (err) {
-      console.error(err)
-    }
+    const { username, email, password } = values;
+    await registerMutation.mutateAsync({ username, email, password });
   }
 
   return (
@@ -77,6 +64,20 @@ const Register = () => {
                 <FormLabel>Username</FormLabel>
                 <FormControl>
                   <Input placeholder="username" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <Input placeholder="you@example.com" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
