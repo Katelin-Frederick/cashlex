@@ -21,7 +21,6 @@ const Register = () => {
   const registerMutation = api.auth.register.useMutation({
     onSuccess: () => {
       console.log('User registered successfully!')
-      // You can redirect or perform other actions here
     },
     onError: (err) => {
       console.log(err.message ?? 'Something went wrong')

@@ -41,24 +41,20 @@ const Login = () => {
     console.log(values)
     const { username, password } = values
 
-    // Perform validation here (optional)
     if (!username || !password) {
       console.log("Username and password are required.");
       return;
     }
 
-    // Call next-auth's signIn method with credentials
     const result = await signIn("credentials", {
-      redirect: false, // Prevent automatic redirect, handle it manually
+      redirect: false,
       username,
       password,
     });
 
     if (result?.error) {
-      // Handle login error (e.g., wrong credentials)
       console.log("Invalid username or password.");
     } else if (result?.ok) {
-      // On success, redirect to the dashboard or home page
       router.push("/dashboard")
     }
   }
@@ -96,9 +92,12 @@ const Login = () => {
           />
 
           <Button type="submit">Login</Button>
-          <Button onClick={() => signIn('github')}>Sign In with Github</Button>
         </form>
       </Form>
+
+      <Button onClick={() => signIn('github', { callbackUrl: '/dashboard' })}>
+        Sign In with Github
+      </Button>
     </div>
   )
 }

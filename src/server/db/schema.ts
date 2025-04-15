@@ -5,6 +5,7 @@ import {
   index,
   uuid,
   text,
+  timestamp,
 } from 'drizzle-orm/pg-core'
 
 /**
@@ -20,13 +21,34 @@ export const users = createTable("user", (d) => ({
   username: text('username').notNull().unique(),
   email: text('email').notNull().unique(),
   passwordHash: text('password_hash'),
+  name: text('name'),
 }));
+
+export const accounts = createTable(
+  "account",
+  (d) => ({
+    userId: d.uuid("userId").notNull().references(() => users.id),
+    type: d.text("type").$type<"oauth">().notNull(),
+    provider: d.text("provider").notNull(),
+    providerAccountId: d.text("providerAccountId").notNull(),
+    refresh_token: d.text("refresh_token"),
+    access_token: d.text("access_token"),
+    expires_at: d.timestamp("expires_at", { withTimezone: true }),
+    token_type: d.text("token_type"),
+    scope: d.text("scope"),
+    id_token: d.text("id_token"),
+    session_state: d.text("session_state"),
+  }),
+  (table) => ({
+    pk: primaryKey({ columns: [table.provider, table.providerAccountId] }),
+  })
+);
 
 export const sessions = createTable(
   "session",
   (d) => ({
     sessionToken: d.varchar({ length: 255 }).notNull().primaryKey(),
-    userId: uuid('userId')  // Change to uuid here
+    userId: uuid('userId')
       .notNull()
       .references(() => users.id),
     expires: d.timestamp({ mode: "date", withTimezone: true }).notNull(),

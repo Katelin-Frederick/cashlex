@@ -2,47 +2,38 @@ import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { type DefaultSession, type NextAuthConfig } from "next-auth";
 import GitHubProvider from 'next-auth/providers/github'
 import Credentials from "next-auth/providers/credentials";
-import { eq, } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import bcrypt from 'bcrypt'
 
 import { db } from "~/server/db";
 import {
   sessions,
   users,
+  accounts,
   verificationTokens,
 } from "~/server/db/schema";
-
-/**
- * Module augmentation for `next-auth` types. Allows us to add custom properties to the `session`
- * object and keep type safety.
- *
- * @see https://next-auth.js.org/getting-started/typescript#module-augmentation
- */
 declare module "next-auth" {
   interface Session extends DefaultSession {
     user: {
       id: string;
-      // ...other properties
-      // role: UserRole;
     } & DefaultSession["user"];
   }
-
-  // interface User {
-  //   // ...other properties
-  //   // role: UserRole;
-  // }
 }
 
-/**
- * Options for NextAuth.js used to configure adapters, providers, callbacks, etc.
- *
- * @see https://next-auth.js.org/configuration/options
- */
 export const authConfig = {
   providers: [
     GitHubProvider({
       clientId: process.env.GITHUB_CLIENT_ID!,
       clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+      async profile(profile) {
+        console.log('profile', profile)
+        return {
+          id: profile.id.toString(),
+          name: profile.name,
+          email: profile.email,
+          username: profile.login,
+        };
+      }
     }),
     Credentials({
       credentials: {
@@ -79,28 +70,41 @@ export const authConfig = {
   ],
   adapter: DrizzleAdapter(db, {
     usersTable: users,
+    accountsTable: accounts,
     sessionsTable: sessions,
     verificationTokensTable: verificationTokens,
   }),
   callbacks: {
-    async session({ session, token }) {
-      // The token is passed here because you are using JWT sessions
-      if (token?.id) {
-        session.user.id = token.id;  // Set the user ID from the JWT token
-      }
-      return session;
-    },
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;  // Store the user ID in the JWT token when the user logs in
+        token.id = user.id;
+        token.email = user.email ?? null;
+
+        token.name = user.name ?? user.username ?? "User";
       }
       return token;
     },
+
+    async session({ session, token }) {
+      if (token) {
+        session.user.id = token.id as string;
+        session.user.name = token.name as string;
+        session.user.email = token.email as string;
+      }
+      return session;
+    },
+
+    async redirect({ url, baseUrl }) {
+      return url.startsWith(baseUrl) ? url : `${baseUrl}/dashboard`;
+    },
   },
   session: {
-    // Customize session expiration time (default is 30 days)
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-    strategy: 'jwt', // Use JWT strategy, which doesn't require a database for session management
-    updateAge: 24 * 60 * 60, // 24 hours, time between updates to the session
+    maxAge: 30 * 24 * 60 * 60,
+    strategy: 'jwt',
+    updateAge: 24 * 60 * 60,
   },
+  pages: {
+    signIn: '/login',
+    error: '/api/auth/error',
+  }
 } satisfies NextAuthConfig;
