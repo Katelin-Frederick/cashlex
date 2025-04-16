@@ -1,5 +1,6 @@
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { type DefaultSession, type NextAuthConfig } from "next-auth";
+import DiscordProvider from "next-auth/providers/discord"
 import GitHubProvider from 'next-auth/providers/github'
 import GoogleProvider from 'next-auth/providers/google';
 import Credentials from "next-auth/providers/credentials";
@@ -23,6 +24,18 @@ declare module "next-auth" {
 
 export const authConfig = {
   providers: [
+    DiscordProvider({
+      clientId: process.env.DISCORD_CLIENT_ID!,
+      clientSecret: process.env.DISCORD_CLIENT_SECRET!,
+      async profile(profile) {
+        return {
+          id: profile.id,
+          name: profile.username,
+          email: profile.email,
+          username: profile.username,
+        };
+      },
+    }),
     GitHubProvider({
       clientId: process.env.GITHUB_CLIENT_ID!,
       clientSecret: process.env.GITHUB_CLIENT_SECRET!,

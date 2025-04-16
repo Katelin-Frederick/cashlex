@@ -102,6 +102,10 @@ const Login = () => {
       <Button onClick={() => signIn("google", { callbackUrl: "/dashboard" })}>
         Sign In with Google
       </Button>
+
+      <Button onClick={() => signIn('discord', { callbackUrl: '/dashboard' })}>
+        Sign In with Discord
+      </Button>
     </div>
   )
 }
