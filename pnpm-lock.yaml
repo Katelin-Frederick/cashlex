@@ -9,7 +9,7 @@ importers:
   .:
     dependencies:
       '@auth/drizzle-adapter':
-        specifier: ^1.7.2
+        specifier: ^1.8.0
         version: 1.8.0
       '@hookform/resolvers':
         specifier: ^5.0.1

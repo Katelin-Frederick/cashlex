@@ -98,6 +98,10 @@ const Login = () => {
       <Button onClick={() => signIn('github', { callbackUrl: '/dashboard' })}>
         Sign In with Github
       </Button>
+
+      <Button onClick={() => signIn("google", { callbackUrl: "/dashboard" })}>
+        Sign In with Google
+      </Button>
     </div>
   )
 }

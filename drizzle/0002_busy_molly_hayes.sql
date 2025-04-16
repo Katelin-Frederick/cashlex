@@ -1,0 +1,1 @@
+ALTER TABLE "cashlex_user" ALTER COLUMN "username" DROP NOT NULL;

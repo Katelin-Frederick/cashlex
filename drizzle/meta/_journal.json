@@ -15,6 +15,20 @@
       "when": 1744712940468,
       "tag": "0001_first_madame_web",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1744772083862,
+      "tag": "0002_busy_molly_hayes",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1744772230892,
+      "tag": "0003_silly_bloodaxe",
+      "breakpoints": true
     }
   ]
 }

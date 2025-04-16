@@ -1,0 +1,1 @@
+ALTER TABLE "cashlex_account" ALTER COLUMN "expires_at" SET DATA TYPE bigint;

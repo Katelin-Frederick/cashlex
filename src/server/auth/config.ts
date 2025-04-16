@@ -1,6 +1,7 @@
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { type DefaultSession, type NextAuthConfig } from "next-auth";
 import GitHubProvider from 'next-auth/providers/github'
+import GoogleProvider from 'next-auth/providers/google';
 import Credentials from "next-auth/providers/credentials";
 import { eq } from 'drizzle-orm'
 import bcrypt from 'bcrypt'
@@ -34,6 +35,19 @@ export const authConfig = {
           username: profile.login,
         };
       }
+    }),
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!, // Add your Google Client ID from Google Developer Console
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!, // Add your Google Client Secret
+      async profile(profile) {
+        console.log('Google profile', profile);
+        return {
+          id: profile.id,
+          name: profile.name,
+          email: profile.email,
+          image: profile.picture,
+        };
+      },
     }),
     Credentials({
       credentials: {

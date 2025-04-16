@@ -18,7 +18,7 @@ export const createTable = pgTableCreator((name) => `cashlex_${name}`);
 
 export const users = createTable("user", (d) => ({
   id: uuid('id').primaryKey().defaultRandom(),
-  username: text('username').notNull().unique(),
+  username: text('username', { nullable: true }).unique(),
   email: text('email').notNull().unique(),
   passwordHash: text('password_hash'),
   name: text('name'),
@@ -33,7 +33,7 @@ export const accounts = createTable(
     providerAccountId: d.text("providerAccountId").notNull(),
     refresh_token: d.text("refresh_token"),
     access_token: d.text("access_token"),
-    expires_at: d.timestamp("expires_at", { withTimezone: true }),
+    expires_at: d.bigint("expires_at", { mode: "number" }),
     token_type: d.text("token_type"),
     scope: d.text("scope"),
     id_token: d.text("id_token"),
