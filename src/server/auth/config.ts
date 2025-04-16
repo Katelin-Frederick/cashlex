@@ -3,6 +3,7 @@ import { type DefaultSession, type NextAuthConfig } from "next-auth";
 import DiscordProvider from "next-auth/providers/discord"
 import GitHubProvider from 'next-auth/providers/github'
 import GoogleProvider from 'next-auth/providers/google';
+import TwitchProvider from "next-auth/providers/twitch";
 import Credentials from "next-auth/providers/credentials";
 import { eq } from 'drizzle-orm'
 import bcrypt from 'bcrypt'
@@ -59,6 +60,19 @@ export const authConfig = {
           name: profile.name,
           email: profile.email,
           image: profile.picture,
+        };
+      },
+    }),
+    TwitchProvider({
+      clientId: process.env.TWITCH_CLIENT_ID!,
+      clientSecret: process.env.TWITCH_CLIENT_SECRET!,
+      async profile(profile) {
+        console.log('Twitch profile', profile)
+        return {
+          id: profile.id,
+          name: profile.preferred_username,
+          email: profile.email,
+          username: profile.preferred_username,
         };
       },
     }),

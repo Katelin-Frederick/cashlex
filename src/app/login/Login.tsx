@@ -106,6 +106,10 @@ const Login = () => {
       <Button onClick={() => signIn('discord', { callbackUrl: '/dashboard' })}>
         Sign In with Discord
       </Button>
+
+      <Button onClick={() => signIn('twitch', { callbackUrl: '/dashboard' })}>
+        Sign In with Twitch
+      </Button>
     </div>
   )
 }
