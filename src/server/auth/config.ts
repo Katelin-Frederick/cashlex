@@ -1,25 +1,25 @@
-import { DrizzleAdapter } from "@auth/drizzle-adapter";
-import { type DefaultSession, type NextAuthConfig } from "next-auth";
-import DiscordProvider from "next-auth/providers/discord"
+import { type DefaultSession, type NextAuthConfig, } from 'next-auth'
+import DiscordProvider from 'next-auth/providers/discord'
+import Credentials from 'next-auth/providers/credentials'
 import GitHubProvider from 'next-auth/providers/github'
-import GoogleProvider from 'next-auth/providers/google';
-import TwitchProvider from "next-auth/providers/twitch";
-import Credentials from "next-auth/providers/credentials";
-import { eq } from 'drizzle-orm'
+import GoogleProvider from 'next-auth/providers/google'
+import TwitchProvider from 'next-auth/providers/twitch'
+import { DrizzleAdapter, } from '@auth/drizzle-adapter'
+import { eq, } from 'drizzle-orm'
 import bcrypt from 'bcrypt'
 
-import { db } from "~/server/db";
 import {
-  sessions,
-  users,
-  accounts,
   verificationTokens,
-} from "~/server/db/schema";
-declare module "next-auth" {
+  sessions,
+  accounts,
+  users,
+} from '~/server/db/schema'
+import { db, } from '~/server/db'
+declare module 'next-auth' {
   interface Session extends DefaultSession {
     user: {
       id: string;
-    } & DefaultSession["user"];
+    } & DefaultSession['user'];
   }
 }
 
@@ -34,7 +34,7 @@ export const authConfig = {
           name: profile.username,
           email: profile.email,
           username: profile.username,
-        };
+        }
       },
     }),
     GitHubProvider({
@@ -47,20 +47,20 @@ export const authConfig = {
           name: profile.name,
           email: profile.email,
           username: profile.login,
-        };
-      }
+        }
+      },
     }),
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!, // Add your Google Client ID from Google Developer Console
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!, // Add your Google Client Secret
       async profile(profile) {
-        console.log('Google profile', profile);
+        console.log('Google profile', profile)
         return {
           id: profile.id,
           name: profile.name,
           email: profile.email,
           image: profile.picture,
-        };
+        }
       },
     }),
     TwitchProvider({
@@ -73,7 +73,7 @@ export const authConfig = {
           name: profile.preferred_username,
           email: profile.email,
           username: profile.preferred_username,
-        };
+        }
       },
     }),
     Credentials({
@@ -104,10 +104,10 @@ export const authConfig = {
         return {
           id: foundUser.id,
           name: foundUser.username,
-          email: foundUser.email
+          email: foundUser.email,
         }
       },
-    }),
+    })
   ],
   adapter: DrizzleAdapter(db, {
     usersTable: users,
@@ -116,27 +116,27 @@ export const authConfig = {
     verificationTokensTable: verificationTokens,
   }),
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, }) {
       if (user) {
-        token.id = user.id;
-        token.email = user.email ?? null;
+        token.id = user.id
+        token.email = user.email ?? null
 
-        token.name = user.name ?? user.username ?? "User";
+        token.name = user.name ?? user.username ?? 'User'
       }
-      return token;
+      return token
     },
 
-    async session({ session, token }) {
+    async session({ session, token, }) {
       if (token) {
-        session.user.id = token.id as string;
-        session.user.name = token.name as string;
-        session.user.email = token.email as string;
+        session.user.id = token.id as string
+        session.user.name = token.name!
+        session.user.email = token.email!
       }
-      return session;
+      return session
     },
 
-    async redirect({ url, baseUrl }) {
-      return url.startsWith(baseUrl) ? url : `${baseUrl}/dashboard`;
+    async redirect({ url, baseUrl, }) {
+      return url.startsWith(baseUrl) ? url : `${baseUrl}/dashboard`
     },
   },
   session: {
@@ -147,5 +147,5 @@ export const authConfig = {
   pages: {
     signIn: '/login',
     error: '/api/auth/error',
-  }
-} satisfies NextAuthConfig;
+  },
+} satisfies NextAuthConfig

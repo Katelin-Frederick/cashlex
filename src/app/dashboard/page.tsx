@@ -1,24 +1,23 @@
-import Link from "next/link";
-import React from "react";
-import Dashboard from "./Dashboard";
+import Link from 'next/link'
+import React from 'react'
 
-const page = () => {
-  return (
-    <div>
-      <h1 className="text-2xl font-bold">Dashboard</h1>
+import Dashboard from './Dashboard'
 
-      <ul>
-        <li className="text-blue-800 underline">
-          <Link href="/">Home</Link>
-        </li>
-        <li className="text-blue-800 underline">
-          <Link href="/register">Register</Link>
-        </li>
-      </ul>
+const page = () => (
+  <div>
+    <h1 className='text-2xl font-bold'>Dashboard</h1>
 
-      <Dashboard />
-    </div>
-  );
-};
+    <ul>
+      <li className='text-blue-800 underline'>
+        <Link href='/'>Home</Link>
+      </li>
+      <li className='text-blue-800 underline'>
+        <Link href='/register'>Register</Link>
+      </li>
+    </ul>
 
-export default page;
+    <Dashboard />
+  </div>
+)
+
+export default page

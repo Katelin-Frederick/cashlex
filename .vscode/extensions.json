@@ -1,0 +1,15 @@
+{
+  "recommendations": [
+    "aaron-bond.better-comments",
+    "alefragnani.Bookmarks",
+    "eamodio.gitlens",
+    "shd101wyy.markdown-preview-enhanced",
+    "meganrogge.template-string-converter",
+    "Gruntfuggly.todo-tree",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "tomoki1207.pdf",
+    "mechatroner.rainbow-csv",
+    "bradlc.vscode-tailwindcss"
+  ]
+}

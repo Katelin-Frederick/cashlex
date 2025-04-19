@@ -1,10 +1,10 @@
-import Link from "next/link";
+import Link from 'next/link'
 
-import { auth } from "~/server/auth";
-import { HydrateClient } from "~/trpc/server";
+import { HydrateClient, } from '~/trpc/server'
+import { auth, } from '~/server/auth'
 
-export default async function Home() {
-  const session = await auth();
+const Home = async () => {
+  const session = await auth()
 
   if (session?.user) {
     console.log('Landing Session', session)
@@ -22,5 +22,7 @@ export default async function Home() {
         </ul>
       </main>
     </HydrateClient>
-  );
+  )
 }
+
+export default Home
