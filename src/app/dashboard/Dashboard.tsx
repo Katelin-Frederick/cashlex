@@ -1,10 +1,8 @@
 'use client'
 
-import { useSession, signOut, } from 'next-auth/react'
+import { useSession, } from 'next-auth/react'
 import { useRouter, } from 'next/navigation'
 import React, { useEffect, } from 'react'
-
-import { Button, } from '~/components/ui/button'
 
 const Dashboard = () => {
   const { data: session, status, } = useSession()
@@ -26,17 +24,10 @@ const Dashboard = () => {
     return <div>Loading...</div>
   }
 
-  const handleSignOut = async () => {
-    await signOut()
-  }
-
   return (
     <div>
       {session ? (
-        <>
-          <Button onClick={handleSignOut}>Sign out</Button>
-          <p>Welcome, {session.user?.name}!</p>
-        </>
+        <p>Welcome, {session.user?.name}!</p>
       ) : (
         <p>You are not logged in. Please log in to view the dashboard.</p>
       )}

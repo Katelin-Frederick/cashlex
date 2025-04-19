@@ -8,7 +8,7 @@ import { users, } from '~/server/db/schema'
 import { db, } from '~/server/db'
 
 export const authRouter = createTRPCRouter({
-  register: publicProcedure
+  signUp: publicProcedure
     .input(
       z.object({
         username: z.string().min(2),

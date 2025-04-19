@@ -2,15 +2,13 @@ import React from 'react'
 
 import Navbar from '~/components/Navbar/Navbar'
 
-import Dashboard from './Dashboard'
+import SignUp from './SignUp'
 
 const page = () => (
   <main>
     <Navbar />
 
-    <h1 className='text-2xl font-bold'>Dashboard</h1>
-
-    <Dashboard />
+    <SignUp />
   </main>
 )
 

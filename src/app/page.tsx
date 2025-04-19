@@ -1,5 +1,5 @@
-import Link from 'next/link'
 
+import Navbar from '~/components/Navbar/Navbar'
 import { HydrateClient, } from '~/trpc/server'
 import { auth, } from '~/server/auth'
 
@@ -13,13 +13,9 @@ const Home = async () => {
   return (
     <HydrateClient>
       <main>
-        <h1 className='text-2xl font-bold'>Landing</h1>
+        <Navbar />
 
-        <ul>
-          <li className='text-blue-800 underline'><Link href='/register'>Register</Link></li>
-          <li className='text-blue-800 underline'><Link href='/login'>Login</Link></li>
-          <li className='text-blue-800 underline'><Link href='/dashboard'>Dashboard</Link></li>
-        </ul>
+        <h1 className='text-2xl font-bold text-center'>Landing</h1>
       </main>
     </HydrateClient>
   )
