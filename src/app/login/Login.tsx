@@ -1,9 +1,10 @@
 'use client'
 
 import { zodResolver, } from '@hookform/resolvers/zod'
+import { useSession, signIn, } from 'next-auth/react'
 import { useRouter, } from 'next/navigation'
 import { useForm, } from 'react-hook-form'
-import { signIn, } from 'next-auth/react'
+import { useEffect, } from 'react'
 import { z, } from 'zod'
 
 import {
@@ -19,10 +20,18 @@ import { Input, } from '~/components/ui/input'
 
 const Login = () => {
   const router = useRouter()
+  const { status, } = useSession()
+
+  // ✅ Redirect to /dashboard if already logged in
+  useEffect(() => {
+    if (status === 'authenticated') {
+      router.push('/dashboard')
+    }
+  }, [status, router])
 
   const formSchema = z.object({
-    username: z.string().min(2, {message: 'Username must be at least 2 characters.',}),
-    password: z.string().min(2, {message: 'Password must be at least 2 characters.',}),
+    username: z.string().min(2, { message: 'Username must be at least 2 characters.', }),
+    password: z.string().min(2, { message: 'Password must be at least 2 characters.', }),
   })
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -34,13 +43,7 @@ const Login = () => {
   })
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    console.log(values)
     const { username, password, } = values
-
-    if (!username || !password) {
-      console.log('Username and password are required.')
-      return
-    }
 
     const result = await signIn('credentials', {
       redirect: false,
@@ -53,6 +56,10 @@ const Login = () => {
     } else if (result?.ok) {
       router.push('/dashboard')
     }
+  }
+
+  if (status === 'loading') {
+    return <div>Loading...</div>
   }
 
   return (
