@@ -2,7 +2,7 @@
 
 import { ChevronDown, ChevronUp, Menu, X, } from 'lucide-react'
 import { useSession, signOut, } from 'next-auth/react'
-import { useEffect, useState, } from 'react'
+import { useState, } from 'react'
 import Link from 'next/link'
 
 import { Button, } from '../ui/button'
@@ -20,12 +20,8 @@ const Navbar = () => {
     await signOut()
   }
 
-  useEffect(() => {
-    console.log('Auth Status:', status)
-  }, [status])
-
   return (
-    <header className='bg-gray-800 shadow-md sticky top-0 w-full z-50'>
+    <header className='bg-gray-800 shadow-lg sticky top-0 w-full z-50 border-b-5 border-green-500'>
       <nav className='max-w-7xl mx-auto px-6 py-4 flex items-center justify-between'>
         <Link href='/' className='text-2xl font-bold text-white hover:text-green-600'>
           Cashlex
@@ -33,14 +29,6 @@ const Navbar = () => {
 
         {/* Desktop Nav */}
         <div className='hidden md:flex space-x-8 text-lg items-center relative'>
-          <Link href='/' className='text-white hover:text-green-600 transition'>
-            Home
-          </Link>
-
-          <Link href='/about' className='text-white hover:text-green-600 transition'>
-            About
-          </Link>
-
           {status === 'authenticated' && (
             <div className='relative'>
               <button
@@ -119,11 +107,13 @@ const Navbar = () => {
           )}
 
           {/* Mobile Hamburger */}
-          <div className='md:hidden'>
-            <button onClick={toggleMenu} className='text-white' aria-label='Toggle Menu'>
-              <Menu size={28} />
-            </button>
-          </div>
+          {status === 'authenticated' && (
+            <div className='md:hidden'>
+              <button onClick={toggleMenu} className='text-white' aria-label='Toggle Menu'>
+                <Menu size={28} />
+              </button>
+            </div>
+          )}
         </div>
       </nav>
 
@@ -137,22 +127,6 @@ const Navbar = () => {
           >
             <X size={32} />
           </button>
-
-          <Link
-            href='/'
-            onClick={toggleMenu}
-            className='hover:text-green-500 transition'
-          >
-            Home
-          </Link>
-
-          <Link
-            href='/about'
-            onClick={toggleMenu}
-            className='hover:text-green-500 transition'
-          >
-            About
-          </Link>
 
           {status === 'authenticated' && (
             <>

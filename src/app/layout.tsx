@@ -1,11 +1,14 @@
 import "~/styles/globals.css";
 
 import { type Metadata } from "next";
-import { Geist } from "next/font/google";
 
 import { TRPCReactProvider } from "~/trpc/react";
 
 import { SessionProvider } from "next-auth/react";
+import { cn } from "~/lib/utils";
+import { manrope } from "~/fonts";
+import Footer from "~/components/Footer/Footer";
+import Navbar from "~/components/Navbar/Navbar";
 
 export const metadata: Metadata = {
   title: "Create T3 App",
@@ -13,19 +16,16 @@ export const metadata: Metadata = {
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
-const geist = Geist({
-  subsets: ["latin"],
-  variable: "--font-geist-sans",
-});
-
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${geist.variable}`}>
-      <body>
+    <html lang="en" className={cn(`${manrope.className}`)}>
+      <body className='flex flex-col min-h-screen'>
         <SessionProvider>
+          <Navbar />
           <TRPCReactProvider>{children}</TRPCReactProvider>
+          <Footer />
         </SessionProvider>
       </body>
     </html>

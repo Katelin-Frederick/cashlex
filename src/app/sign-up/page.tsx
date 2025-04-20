@@ -1,15 +1,13 @@
 import React from 'react'
 
-import Navbar from '~/components/Navbar/Navbar'
-
 import SignUp from './SignUp'
 
 const page = () => (
-  <main>
-    <Navbar />
-
-    <SignUp />
-  </main>
+  <div className='flex flex-col flex-1'>
+    <main className='flex-1 flex flex-col'>
+      <SignUp />
+    </main>
+  </div>
 )
 
 export default page

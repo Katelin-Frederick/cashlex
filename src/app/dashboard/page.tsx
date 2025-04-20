@@ -1,17 +1,15 @@
 import React from 'react'
 
-import Navbar from '~/components/Navbar/Navbar'
-
 import Dashboard from './Dashboard'
-
 const page = () => (
-  <main>
-    <Navbar />
+  <div className='flex flex-col flex-1'>
+    <main className='flex-1 flex flex-col'>
+      <h1 className='text-2xl font-bold'>Dashboard</h1>
 
-    <h1 className='text-2xl font-bold'>Dashboard</h1>
-
-    <Dashboard />
-  </main>
+      <Dashboard />
+    </main>
+  </div>
 )
 
 export default page
+

@@ -1,15 +1,13 @@
 import React from 'react'
 
-import Navbar from '~/components/Navbar/Navbar'
-
 import Login from './Login'
 
 const page = () => (
-  <main>
-    <Navbar />
-
-    <Login />
-  </main>
+  <div className='flex flex-col flex-1'>
+    <main className='flex-1 flex flex-col'>
+      <Login />
+    </main>
+  </div>
 )
 
 export default page

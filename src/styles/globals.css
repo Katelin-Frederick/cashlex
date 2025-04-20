@@ -30,6 +30,7 @@
 body {
   color: #1A202C;
   background-color: #F7FAF9;
+  font-size: large;
 }
 
 @theme inline {
@@ -144,3 +145,8 @@ body {
     @apply border-border outline-ring/50;
   }
 }
+
+.container {
+  @apply max-w-[65rem];
+  @apply px-5;
+ }
