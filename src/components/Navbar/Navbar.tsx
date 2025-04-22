@@ -1,24 +1,42 @@
 'use client'
 
 import { ChevronDown, ChevronUp, Menu, X, } from 'lucide-react'
+import { AnimatePresence, motion, } from 'framer-motion'
 import { useSession, signOut, } from 'next-auth/react'
+import { usePathname, } from 'next/navigation'
 import { useState, } from 'react'
 import Link from 'next/link'
+
+import { cn, } from '~/lib/utils'
 
 import { Button, } from '../ui/button'
 
 const Navbar = () => {
   const { status, } = useSession()
+  const pathname = usePathname()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isDropdownVisible, setIsDropdownVisible] = useState(false)
 
   const toggleMenu = () => setIsMenuOpen((prev) => !prev)
   const toggleDropdown = () => setIsDropdownVisible((prev) => !prev)
-  const closeDropdown = () => setIsDropdownVisible(false)
+  const closeAllMenus = () => {
+    setIsDropdownVisible(false)
+    setIsMenuOpen(false)
+  }
 
   const handleSignOut = async () => {
     await signOut()
   }
+
+  const getLinkClasses = (href: string, baseClasses: string, activeClasses: string) => cn(baseClasses, pathname === href && activeClasses)
+
+  const menuLinks = [
+    { href: '/dashboard', label: 'Dashboard', },
+    { href: '/transactions', label: 'Transactions', },
+    { href: '/budgets', label: 'Budgets', },
+    { href: '/reports', label: 'Reports', },
+    { href: '/recurring', label: 'Recurring', }
+  ]
 
   return (
     <header className='bg-gray-800 shadow-lg sticky top-0 w-full z-50 border-b-5 border-green-500'>
@@ -43,49 +61,32 @@ const Navbar = () => {
                 )}
               </button>
 
-              {isDropdownVisible && (
-                <div className='absolute top-full left-0 mt-2 w-48 bg-gray-800 border border-gray-700 rounded-md shadow-lg z-50'>
-                  <Link
-                    href='/dashboard'
-                    onClick={closeDropdown}
-                    className='block px-4 py-2 text-white hover:bg-green-700 transition rounded-t-md'
+              <AnimatePresence>
+                {isDropdownVisible && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10, }}
+                    animate={{ opacity: 1, y: 0, }}
+                    exit={{ opacity: 0, y: -10, }}
+                    transition={{ duration: 0.4, }}
+                    className='absolute top-full left-0 mt-2 w-48 bg-gray-800 border border-gray-700 rounded-md shadow-lg z-50'
                   >
-                    Dashboard
-                  </Link>
-
-                  <Link
-                    href='/transactions'
-                    onClick={closeDropdown}
-                    className='block px-4 py-2 text-white hover:bg-green-700 transition'
-                  >
-                    Transactions
-                  </Link>
-
-                  <Link
-                    href='/budgets'
-                    onClick={closeDropdown}
-                    className='block px-4 py-2 text-white hover:bg-green-700 transition'
-                  >
-                    Budgets
-                  </Link>
-
-                  <Link
-                    href='/reports'
-                    onClick={closeDropdown}
-                    className='block px-4 py-2 text-white hover:bg-green-700 transition'
-                  >
-                    Reports
-                  </Link>
-
-                  <Link
-                    href='/recurring'
-                    onClick={closeDropdown}
-                    className='block px-4 py-2 text-white hover:bg-green-700 transition rounded-b-md'
-                  >
-                    Recurring
-                  </Link>
-                </div>
-              )}
+                    {menuLinks.map(({ href, label, }, idx) => (
+                      <Link
+                        key={idx}
+                        href={href}
+                        onClick={closeAllMenus}
+                        className={getLinkClasses(
+                          href,
+                          'block px-4 py-2 text-white hover:bg-green-700 transition',
+                          'bg-green-700'
+                        )}
+                      >
+                        {label}
+                      </Link>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
         </div>
@@ -98,10 +99,14 @@ const Navbar = () => {
           ) : (
             <>
               <Link href='/sign-up'>
-                <Button variant='secondary' size='sm'>Sign Up</Button>
+                <Button variant='secondary' size='sm'>
+                  Sign Up
+                </Button>
               </Link>
               <Link href='/login'>
-                <Button variant='green' size='sm'>Login</Button>
+                <Button variant='green' size='sm'>
+                  Login
+                </Button>
               </Link>
             </>
           )}
@@ -118,61 +123,40 @@ const Navbar = () => {
       </nav>
 
       {/* Mobile Overlay Menu */}
-      {isMenuOpen && (
-        <div className='fixed inset-0 bg-gray-800 bg-opacity-95 z-40 flex flex-col items-center justify-center space-y-6 text-white text-xl md:hidden'>
-          <button
-            onClick={toggleMenu}
-            className='absolute top-6 right-6 text-white hover:text-green-500'
-            aria-label='Close Menu'
+      <AnimatePresence>
+        {isMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -10, }}
+            animate={{ opacity: 1, y: 0, }}
+            exit={{ opacity: 0, y: -10, }}
+            transition={{ duration: 0.4, }}
+            className='fixed inset-0 bg-gray-800 bg-opacity-95 z-40 flex flex-col items-center justify-center space-y-6 text-white text-xl md:hidden'
           >
-            <X size={32} />
-          </button>
+            <button
+              onClick={toggleMenu}
+              className='absolute top-6 right-6 text-white hover:text-green-500'
+              aria-label='Close Menu'
+            >
+              <X size={32} />
+            </button>
 
-          {status === 'authenticated' && (
-            <>
+            {menuLinks.map(({ href, label, }, idx) => (
               <Link
-                href='/dashboard'
-                onClick={closeDropdown}
-                className='hover:text-green-500 transition'
+                key={idx}
+                href={href}
+                onClick={closeAllMenus}
+                className={getLinkClasses(
+                  href,
+                  'hover:text-green-500 transition',
+                  'text-green-500 underline'
+                )}
               >
-                Dashboard
+                {label}
               </Link>
-
-              <Link
-                href='/transactions'
-                onClick={closeDropdown}
-                className='hover:text-green-500 transition'
-              >
-                Transactions
-              </Link>
-
-              <Link
-                href='/budgets'
-                onClick={closeDropdown}
-                className='hover:text-green-500 transition'
-              >
-                Budgets
-              </Link>
-
-              <Link
-                href='/reports'
-                onClick={closeDropdown}
-                className='hover:text-green-500 transition'
-              >
-                Reports
-              </Link>
-
-              <Link
-                href='/recurring'
-                onClick={closeDropdown}
-                className='hover:text-green-500 transition'
-              >
-                Recurring
-              </Link>
-            </>
-          )}
-        </div>
-      )}
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   )
 }

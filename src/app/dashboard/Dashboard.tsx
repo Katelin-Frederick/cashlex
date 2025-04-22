@@ -14,12 +14,6 @@ const Dashboard = () => {
     }
   }, [status, router])
 
-  useEffect(() => {
-    if (session) {
-      console.log('session dashboard:', session)
-    }
-  }, [session])
-
   if (status === 'loading') {
     return <div>Loading...</div>
   }
