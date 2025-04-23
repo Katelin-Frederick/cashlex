@@ -40,7 +40,7 @@ const Navbar = () => {
 
   return (
     <header className='bg-gray-800 shadow-lg sticky top-0 w-full z-50 border-b-5 border-green-500'>
-      <nav className='max-w-7xl mx-auto px-6 py-4 flex items-center justify-between'>
+      <nav className='max-w-7xl mx-auto px-6 py-4 flex items-center justify-between container mx-auto'>
         <Link href='/' className='text-2xl font-bold text-white hover:text-green-600'>
           Cashlex
         </Link>

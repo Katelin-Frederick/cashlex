@@ -23,7 +23,7 @@ const Dashboard = () => {
       {session ? (
         <p>Welcome, {session.user?.name}!</p>
       ) : (
-        <p>You are not logged in. Please log in to view the dashboard.</p>
+        <p>You are not logged in. Please log in to view this page.</p>
       )}
     </div>
   )

@@ -14,7 +14,7 @@ const Footer = () => {
 
   return (
     <footer className='bg-gray-800 text-gray-300 py-10 border-t-5 border-green-500'>
-      <div className='max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8'>
+      <div className='max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8 container'>
 
         <div>
           <Link href='/' className='text-2xl font-bold text-white mb-4 hover:text-green-300'>Cashlex</Link>
