@@ -9,6 +9,7 @@ import { motion, } from 'framer-motion'
 import { X, } from 'lucide-react'
 import { z, } from 'zod'
 
+import { DialogDescription, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogClose, Dialog, } from '~/components/ui/dialog'
 import {
   FormControl,
   FormMessage,
@@ -21,11 +22,13 @@ import { CardDescription, CardContent, CardHeader, CardTitle, Card, } from '~/co
 import { CurrencyInput, } from '~/components/CurrencyInput/CurrencyInput'
 import { Button, } from '~/components/ui/button'
 import { Input, } from '~/components/ui/input'
+import { cn, } from '~/lib/utils'
 
 type Budget = {
   name: string
   amount: number
   description?: string
+  spent: number
 }
 
 const formSchema = z.object({
@@ -34,6 +37,7 @@ const formSchema = z.object({
     .string()
     .regex(/^\d+(\.\d{1,2})?$/, { message: 'Amount must be a valid number.', })
     .refine((val) => parseFloat(val) > 0, { message: 'Amount must be a positive number.', }),
+  spent: z.number(),
   description: z.string().optional(),
 })
 
@@ -45,7 +49,6 @@ const Budgets = () => {
 
   const [budgets, setBudgets] = useState<Budget[]>([])
   const [deletingId, setDeletingId] = useState<number | null>(null)
-  const [undo, setUndo] = useState<{ budget: Budget; index: number } | null>(null)
 
   const form = useForm<FormSchema>({
     resolver: zodResolver(formSchema),
@@ -53,19 +56,19 @@ const Budgets = () => {
       name: '',
       amount: '',
       description: '',
+      spent: 0,
     },
   })
 
   const onSubmit = (values: FormSchema) => {
-    const { name, amount, description, } = values
+    const { amount, } = values
     const amountNumber = parseFloat(amount)
 
     setBudgets([
       ...budgets,
       {
-        name,
+        ...values,
         amount: amountNumber,
-        description,
       }
     ])
 
@@ -74,27 +77,12 @@ const Budgets = () => {
 
   const handleDelete = (index: number) => {
     const budgetToDelete = budgets[index]
+    const filteredBudgets = budgets.filter((_, i) => i !== index)
+
     if (budgetToDelete) {
-      setUndo({ budget: budgetToDelete, index, })
-      setBudgets(budgets.filter((_, i) => i !== index))
+      setBudgets(filteredBudgets)
       setDeletingId(null)
     }
-  }
-
-  const handleUndo = () => {
-    if (undo) {
-      const { budget, index, } = undo
-      setBudgets([
-        ...budgets.slice(0, index),
-        budget,
-        ...budgets.slice(index)
-      ])
-      setUndo(null)
-    }
-  }
-
-  const handleCancelDelete = () => {
-    setDeletingId(null)
   }
 
   useEffect(() => {
@@ -173,7 +161,7 @@ const Budgets = () => {
               {budgets.map((budget, index) => (
                 <motion.div
                   key={index}
-                  className='w-52'
+                  className='w-56'
                   initial={{ opacity: 0, }}
                   animate={{ opacity: 1, }}
                   exit={{ opacity: 0, }}
@@ -187,17 +175,41 @@ const Budgets = () => {
                       )}
                     </CardHeader>
                     <CardContent>
-                      <p>${budget.amount.toFixed(2)}</p>
+                      <p>Amount: ${budget.amount.toFixed(2)}</p>
+                      <p>Spent: ${budget.spent.toFixed(2)}</p>
+                      <p
+                        className={cn(budget.amount - budget.spent >= 0 ? 'text-green-800' : 'text-red-300')}
+                      >
+                        Remaining: ${(budget.amount - budget.spent).toFixed(2)}
+                      </p>
                     </CardContent>
                     <div className='absolute top-2 right-2'>
-                      <Button
-                        variant='destructive'
-                        size='icon'
-                        className='size-6 p-0.5'
-                        onClick={() => setDeletingId(index)}
-                      >
-                        <X size={14} />
-                      </Button>
+                      <Dialog>
+                        <DialogTrigger onClick={() => setDeletingId(index)} className='size-6 p-0.5 hover:text-red-300'>
+                          <X size={16} />
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Delete a Budget</DialogTitle>
+                            <DialogDescription>
+                              Click Delete to remove this budget, or Cancel to keep it
+                            </DialogDescription>
+                            <p>Are you sure you want to delete this budget: <span className='font-bold'>{budget.name}</span>?</p>
+                            <p className='mt-4'>Once deleted, it can&apos;t be undone</p>
+                          </DialogHeader>
+                          <DialogClose asChild>
+                            <Button variant='outline'>
+                              Cancel
+                            </Button>
+                          </DialogClose>
+                          <Button
+                            variant='destructive'
+                            onClick={() => handleDelete(deletingId!)}
+                          >
+                            Delete
+                          </Button>
+                        </DialogContent>
+                      </Dialog>
                     </div>
                   </Card>
                 </motion.div>
@@ -209,37 +221,6 @@ const Budgets = () => {
         </div>
       ) : (
         <p>You are not logged in. Please log in to view this page.</p>
-      )}
-
-      {/* Confirmation Modal */}
-      {deletingId !== null && (
-        <div className='fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center'>
-          <div className='bg-white p-6 rounded-md w-1/3'>
-            <h3 className='text-xl mb-4'>Are you sure you want to delete this budget?</h3>
-            <div className='flex justify-end space-x-4'>
-              <Button variant='outline' onClick={handleCancelDelete}>
-                Cancel
-              </Button>
-              <Button variant='destructive' onClick={() => handleDelete(deletingId)}>
-                Delete
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Undo Snackbar */}
-      {undo && (
-        <div className='fixed bottom-0 left-1/2 transform -translate-x-1/2 bg-green-500 text-white p-4 rounded-md'>
-          <div className='flex justify-between items-center'>
-            <span>
-              Budget deleted. <span className='font-bold'>{undo.budget.name}</span>
-            </span>
-            <Button variant='link' className='text-white' onClick={handleUndo}>
-              Undo
-            </Button>
-          </div>
-        </div>
       )}
     </div>
   )
