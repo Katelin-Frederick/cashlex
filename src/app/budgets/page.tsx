@@ -1,10 +1,11 @@
 import React from 'react'
 
-import Budgets from './Budgets'
+import BudgetsPage from './BudgetsPage'
+
 const page = () => (
   <div className='flex flex-col flex-1'>
     <main className='container mx-auto'>
-      <Budgets />
+      <BudgetsPage />
     </main>
   </div>
 )
