@@ -1,6 +1,7 @@
 import {
   pgTableCreator,
   primaryKey,
+  decimal,
   index,
   uuid,
   text,
@@ -52,6 +53,16 @@ export const sessions = createTable(
   }),
   (t) => [index('t_user_id_idx').on(t.userId)]
 )
+
+export const budgets = createTable('budget', (d) => ({
+  id: d.uuid('id').primaryKey().defaultRandom(),
+  userId: d.uuid('userId').notNull().references(() => users.id),
+  name: d.text('name').notNull(),
+  description: d.text('description'),
+  amount: decimal('amount', { precision: 10, scale: 2, }).notNull().$type<number>(),
+  spent: decimal('spent', { precision: 10, scale: 2, }).notNull().default('0').$type<number>(),
+  createdAt: d.timestamp('created_at', { mode: 'date', withTimezone: false, }).defaultNow(),
+}))
 
 export const sessionsRelations = relations(
   sessions,

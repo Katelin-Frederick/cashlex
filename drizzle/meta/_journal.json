@@ -29,6 +29,13 @@
       "when": 1744772230892,
       "tag": "0003_silly_bloodaxe",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1745464595489,
+      "tag": "0004_unknown_blazing_skull",
+      "breakpoints": true
     }
   ]
 }
