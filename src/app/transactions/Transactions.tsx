@@ -51,15 +51,29 @@ import { api, } from '~/trpc/react'
 import { cn, } from '~/lib/utils'
 
 export type Transaction = {
-  amount: number
+  id: string
+  userId: string
   paymentName: string
   paymentType: 'income' | 'expense'
+  amount: number
   paidDate: Date
-  budget?: null | string
-  category?: string
+  budgetId: string | null
+  category: string | null
+  createdAt: Date | null
+  budget?: string | null // still needed for display
 }
 
-export const columns: ColumnDef<Transaction>[] = [
+type Budgets = {
+  amount: number;
+  spent: number;
+  id: string;
+  userId: string;
+  name: string;
+  description: string | null;
+  createdAt: Date | null;
+}[]
+
+export const columns = (budgets: Budgets): ColumnDef<Transaction>[] => ([
   {
     id: 'select',
     header: ({ table, }) => (
@@ -176,7 +190,7 @@ export const columns: ColumnDef<Transaction>[] = [
     enableSorting: true,
   },
   {
-    accessorKey: 'budget',
+    accessorKey: 'budgetId',
     header: ({ column, }) => (
       <button
         className='flex items-center space-x-2'
@@ -187,7 +201,12 @@ export const columns: ColumnDef<Transaction>[] = [
         {column.getIsSorted() === 'desc' && <ChevronDown className='h-4 w-4' />}
       </button>
     ),
-    cell: ({ row, }) => <div className='capitalize text-left'>{row.getValue('budget')}</div>,
+    cell: ({ row, }) => {
+      const budgetId = row.getValue('budgetId')
+      const budget = budgets.find((budget) => budget.id === budgetId)
+
+      return <div className='capitalize text-left'>{budget ? budget.name : 'No Budget'}</div>
+    },
     enableSorting: true,
   },
   {
@@ -217,7 +236,7 @@ export const columns: ColumnDef<Transaction>[] = [
     },
     enableHiding: false,
   }
-]
+])
 
 const formSchema = z.object({
   paymentName: z.string().min(2, { message: 'Payment Name must be at least 2 characters.', }),
@@ -237,8 +256,10 @@ const Transactions = () => {
   const { status, } = useSession()
   const router = useRouter()
   const { data: budgets = [], isLoading, } = api.budget.getAll.useQuery()
+  const createTransaction = api.transactions.create.useMutation()
+  const getTransactions = api.transactions.getAll.useQuery(undefined, { refetchOnWindowFocus: false, })
 
-  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const transactions = getTransactions.data ?? []
 
   const form = useForm<FormSchema>({
     resolver: zodResolver(formSchema),
@@ -259,7 +280,7 @@ const Transactions = () => {
 
   const table = useReactTable({
     data: transactions,
-    columns,
+    columns: columns(budgets),
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
@@ -276,17 +297,17 @@ const Transactions = () => {
     },
   })
 
-  const onSubmit = (values: FormSchema) => {
-    const newTransaction: Transaction = {
-      amount: parseFloat(values.amount),
+  const onSubmit = async (values: FormSchema) => {
+    await createTransaction.mutateAsync({
       paymentName: values.paymentName,
       paymentType: values.paymentType as 'income' | 'expense',
+      amount: parseFloat(values.amount),
       paidDate: values.paidDate,
-      budget: values.budget ?? null,
+      budgetId: values.budget ?? null, // ✅ correct name here
       category: values.category,
-    }
+    })
 
-    setTransactions((prev) => [newTransaction, ...prev])
+    await getTransactions.refetch()
     form.reset()
   }
 
@@ -409,7 +430,7 @@ const Transactions = () => {
                     </FormControl>
                     <SelectContent>
                       {budgets.map((budget) => (
-                        <SelectItem key={budget.id} value={budget.name}>
+                        <SelectItem key={budget.id} value={budget.id}>
                           {budget.name}
                         </SelectItem>
                       ))}
