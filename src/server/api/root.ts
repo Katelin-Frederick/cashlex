@@ -1,5 +1,6 @@
 import { createCallerFactory, createTRPCRouter, } from '~/server/api/trpc'
 
+import { transactionRouter, } from './routers/transactions'
 import { budgetRouter, } from './routers/budget'
 import { authRouter, } from './routers/auth'
 
@@ -11,6 +12,7 @@ import { authRouter, } from './routers/auth'
 export const appRouter = createTRPCRouter({
   auth: authRouter,
   budget: budgetRouter,
+  transactions: transactionRouter,
 })
 
 // export type definition of API

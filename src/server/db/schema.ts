@@ -46,9 +46,7 @@ export const sessions = createTable(
   'session',
   (d) => ({
     sessionToken: d.varchar({ length: 255, }).notNull().primaryKey(),
-    userId: uuid('userId')
-      .notNull()
-      .references(() => users.id),
+    userId: uuid('userId').notNull().references(() => users.id),
     expires: d.timestamp({ mode: 'date', withTimezone: true, }).notNull(),
   }),
   (t) => [index('t_user_id_idx').on(t.userId)]
@@ -63,6 +61,27 @@ export const budgets = createTable('budget', (d) => ({
   spent: decimal('spent', { precision: 10, scale: 2, }).notNull().default('0').$type<number>(),
   createdAt: d.timestamp('created_at', { mode: 'date', withTimezone: false, }).defaultNow(),
 }))
+
+export const transactions = createTable('transaction', (d) => ({
+  id: d.uuid('id').primaryKey().defaultRandom(),
+  userId: d.uuid('userId').notNull().references(() => users.id),
+  paymentName: d.text('payment_name').notNull(),
+  paymentType: d.text('payment_type').notNull().$type<'income' | 'expense'>(),
+  amount: decimal('amount', { precision: 10, scale: 2, }).notNull().$type<number>(),
+  paidDate: d.timestamp('paid_date', { mode: 'date', withTimezone: false, }).notNull(),
+  budgetId: d.uuid('budgetId').references(() => budgets.id),  // No need for `.nullable()`
+  category: d.text('category'),  // Automatically nullable by default
+  createdAt: d.timestamp('created_at', { mode: 'date', withTimezone: false, }).defaultNow(),
+}))
+
+// Correct relations definition
+export const transactionsRelations = relations(
+  transactions,
+  ({ one, many, }) => ({
+    user: one(users, { fields: [transactions.userId], references: [users.id], }),
+    budget: one(budgets, { fields: [transactions.budgetId], references: [budgets.id], nullable: true, }),  // Explicitly handle nullable
+  })
+)
 
 export const sessionsRelations = relations(
   sessions,

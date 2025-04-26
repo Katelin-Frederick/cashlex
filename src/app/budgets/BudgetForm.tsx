@@ -48,7 +48,7 @@ const BudgetForm = () => {
         description: newBudget.description ?? '',
         spent: 0,
         createdAt: new Date(),
-        userId: '', // optional depending on your UI
+        userId: '',
       }
 
       utils.budget.getAll.setData(undefined, (old = []) => [...old, optimisticBudget])
