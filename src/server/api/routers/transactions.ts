@@ -1,8 +1,8 @@
-import { eq, } from 'drizzle-orm'
+import { sql, eq, } from 'drizzle-orm'
 import { z, } from 'zod'
 
 import { protectedProcedure, createTRPCRouter, } from '~/server/api/trpc'
-import { transactions, } from '~/server/db/schema'
+import { transactions, budgets, } from '~/server/db/schema'
 import { db, } from '~/server/db'
 
 const createTransactionSchema = z.object({
@@ -23,13 +23,29 @@ export const transactionRouter = createTRPCRouter({
 
   create: protectedProcedure
     .input(createTransactionSchema)
-    .mutation(async ({ ctx, input, }) => {
-      const result = await db.insert(transactions).values({
-        ...input,
-        userId: ctx.session.user.id,
-        budgetId: input.budgetId ?? null,
+    .mutation(async ({ input, ctx, }) => {
+      const userId = ctx.session.user.id
+
+      await ctx.db.transaction(async (tx) => {
+        await tx.insert(transactions).values({
+          userId,
+          paymentName: input.paymentName,
+          paymentType: input.paymentType,
+          amount: input.amount,
+          paidDate: input.paidDate,
+          budgetId: input.budgetId ?? null,
+          category: input.category ?? null,
+        })
+
+        if (input.paymentType === 'expense' && input.budgetId) {
+          await tx
+            .update(budgets)
+            .set({ spent: sql`${budgets.spent} + ${input.amount}`, })
+            .where(eq(budgets.id, input.budgetId))
+        }
       })
-      return result
+
+      return { success: true, }
     }),
 
   delete: protectedProcedure

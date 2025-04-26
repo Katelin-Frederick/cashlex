@@ -19,7 +19,18 @@ const BudgetsPage = () => {
     }
   }, [status, router])
 
-  const { data: budgets = [], isLoading, } = api.budget.getAll.useQuery(undefined, { enabled: status === 'authenticated', })
+  const query = api.budget.getAll.useQuery(undefined, {
+    enabled: status === 'authenticated',
+    staleTime: 0, // always consider cache stale to trigger fresh fetch
+  })
+
+  const { data: budgets = [], isLoading, } = query
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      void query.refetch()
+    }
+  }, [status])
 
   if (status === 'loading') return <div>Loading session...</div>
 

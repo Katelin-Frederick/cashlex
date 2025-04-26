@@ -2,7 +2,7 @@ import { eq, } from 'drizzle-orm'
 import { z, } from 'zod'
 
 import { protectedProcedure, createTRPCRouter, } from '~/server/api/trpc'
-import { budgets, } from '~/server/db/schema'
+import { transactions, budgets, } from '~/server/db/schema'
 import { db, } from '~/server/db'
 
 export const budgetRouter = createTRPCRouter({
@@ -34,6 +34,19 @@ export const budgetRouter = createTRPCRouter({
     }).returning()),
 
   delete: protectedProcedure
-    .input(z.object({ id: z.string(), }))
-    .mutation(async ({ input, }) => db.delete(budgets).where(eq(budgets.id, input.id))),
+    .input(z.object({ id: z.string().uuid(), }))
+    .mutation(async ({ input, ctx, }) => {
+      await ctx.db.transaction(async (tx) => {
+        await tx
+          .update(transactions)
+          .set({ budgetId: null, })
+          .where(eq(transactions.budgetId, input.id))
+
+        await tx
+          .delete(budgets)
+          .where(eq(budgets.id, input.id))
+      })
+
+      return { success: true, }
+    }),
 })
