@@ -73,7 +73,9 @@ type Budgets = {
   createdAt: Date | null;
 }[]
 
-export const columns = (budgets: Budgets): ColumnDef<Transaction>[] => ([
+type DeleteTransactionMutation = ReturnType<typeof api.transactions.delete.useMutation>
+
+export const columns = (budgets: Budgets, deleteTransaction: DeleteTransactionMutation): ColumnDef<Transaction>[] => ([
   {
     id: 'select',
     header: ({ table, }) => (
@@ -212,7 +214,7 @@ export const columns = (budgets: Budgets): ColumnDef<Transaction>[] => ([
   {
     id: 'actions',
     cell: ({ row, }) => {
-      const payment = row.original
+      const payment = row.original // Get the payment from the row
 
       return (
         <DropdownMenu>
@@ -230,6 +232,17 @@ export const columns = (budgets: Budgets): ColumnDef<Transaction>[] => ([
             <DropdownMenuSeparator />
             <DropdownMenuItem>View customer</DropdownMenuItem>
             <DropdownMenuItem>View payment details</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {/* Add the Delete option */}
+            <DropdownMenuItem
+              onClick={async () => {
+                if (window.confirm('Are you sure you want to delete this transaction?')) {
+                  await deleteTransaction.mutateAsync({ id: payment.id, })
+                }
+              }}
+            >
+              Delete Transaction
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )
@@ -258,6 +271,11 @@ const Transactions = () => {
   const { data: budgets = [], isLoading, } = api.budget.getAll.useQuery()
   const createTransaction = api.transactions.create.useMutation()
   const getTransactions = api.transactions.getAll.useQuery(undefined, { refetchOnWindowFocus: false, })
+  const deleteTransaction = api.transactions.delete.useMutation({
+    onSuccess: async () => {
+      await getTransactions.refetch()
+    },
+  })
 
   const transactions = getTransactions.data ?? []
 
@@ -280,7 +298,7 @@ const Transactions = () => {
 
   const table = useReactTable({
     data: transactions,
-    columns: columns(budgets),
+    columns: columns(budgets, deleteTransaction),
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
@@ -561,6 +579,26 @@ const Transactions = () => {
             >
               Next
             </Button>
+            <Button
+              variant='destructive'
+              disabled={table.getFilteredSelectedRowModel().rows.length === 0}
+              onClick={async () => {
+                if (
+                  window.confirm(
+                    `Are you sure you want to delete ${table.getFilteredSelectedRowModel().rows.length} transaction(s)?`
+                  )
+                ) {
+                  const selectedRows = table.getFilteredSelectedRowModel().rows
+                  for (const row of selectedRows) {
+                    const transactionId = row.original.id
+                    await deleteTransaction.mutateAsync({ id: transactionId, })
+                  }
+                }
+              }}
+            >
+              Delete Selected
+            </Button>
+
           </div>
         </div>
       </div>
