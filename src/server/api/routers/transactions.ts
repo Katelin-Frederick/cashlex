@@ -21,14 +21,45 @@ export const transactionRouter = createTRPCRouter({
       .from(transactions)
       .where(
         and(
-          eq(transactions.userId, ctx.session.user.id),
-          eq(transactions.paymentType, 'income')
+          eq(transactions.userId, ctx.session.user.id)
         )
       )
 
     const totalIncome = result.length > 0 ? Number(result[0]?.totalIncome ?? 0) : 0
 
     return { totalIncome, }
+  }),
+
+  getAllIncome: protectedProcedure.query(async ({ ctx, }) => {
+    const result = await db
+      .select({ allIncome: sql`SUM(${transactions.amount})`.as('allIncome'), })
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.userId, ctx.session.user.id),
+          eq(transactions.paymentType, 'income')
+        )
+      )
+
+    const allIncome = result.length > 0 ? Number(result[0]?.allIncome ?? 0) : 0
+
+    return { allIncome, }
+  }),
+
+  getAllExpenses: protectedProcedure.query(async ({ ctx, }) => {
+    const result = await db
+      .select({ allExpenses: sql`SUM(${transactions.amount})`.as('allExpenses'), })
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.userId, ctx.session.user.id),
+          eq(transactions.paymentType, 'expense')
+        )
+      )
+
+    const allExpenses = result.length > 0 ? Number(result[0]?.allExpenses ?? 0) : 0
+
+    return { allExpenses, }
   }),
 
   getAll: protectedProcedure.query(async ({ ctx, }) => db
@@ -50,7 +81,7 @@ export const transactionRouter = createTRPCRouter({
           paymentType: input.paymentType,
           amount: input.amount,
           paidDate: input.paidDate,
-          budgetId: input.budgetId ?? null,
+          budgetId: input.budgetId && input.paymentType === 'expense' ? input.budgetId : null,
           category: input.category ?? null,
         })
 

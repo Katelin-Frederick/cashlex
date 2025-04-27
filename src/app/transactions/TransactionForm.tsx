@@ -41,6 +41,8 @@ const TransactionForm = ({ onSuccess, }: { onSuccess?: () => void }) => {
     },
   })
 
+  const watchAllFields = form.watch()
+
   const onSubmit = async (values: TransactionFormValues) => {
     await createTransaction.mutateAsync({
       paymentName: values.paymentName,
@@ -84,6 +86,7 @@ const TransactionForm = ({ onSuccess, }: { onSuccess?: () => void }) => {
                     onValueChange={field.onChange}
                     defaultValue={field.value}
                     className='flex flex-col space-y-1'
+                    value={field.value}
                   >
                     <FormItem className='flex items-center space-x-3 space-y-0'>
                       <FormControl>
@@ -151,30 +154,32 @@ const TransactionForm = ({ onSuccess, }: { onSuccess?: () => void }) => {
               </FormItem>
             )}
           />
-          <FormField
-            control={form.control}
-            name='budget'
-            render={({ field, }) => (
-              <FormItem>
-                <FormLabel>Budget</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value ?? ''}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder='Select a budget (optional)' />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {budgets.map((budget) => (
-                      <SelectItem key={budget.id} value={budget.id}>
-                        {budget.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {watchAllFields.paymentType === 'expense' && (
+            <FormField
+              control={form.control}
+              name='budget'
+              render={({ field, }) => (
+                <FormItem>
+                  <FormLabel>Budget</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder='Select a budget (optional)' />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className='max-h-40 overflow-y-auto'>
+                      {budgets.map((budget) => (
+                        <SelectItem key={budget.id} value={budget.id}>
+                          {budget.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
           <FormField
             control={form.control}
             name='category'

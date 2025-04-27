@@ -26,9 +26,20 @@ import { Button, } from '~/components/ui/button'
 import { Input, } from '~/components/ui/input'
 import { api, } from '~/trpc/react'
 
-import type { Transaction, } from './Transactions'
-
 import { getColumns, } from './columns'
+
+export type Transaction = {
+  id: string
+  userId: string
+  paymentName: string
+  paymentType: 'income' | 'expense'
+  amount: number
+  paidDate: Date
+  budgetId: string | null
+  category: string | null
+  createdAt: Date | null
+  budget?: string | null
+}
 
 type Budgets = {
   amount: number;
@@ -43,11 +54,11 @@ type Budgets = {
 const TransactionTable = ({
   data,
   budgets,
-  deleteTransaction, // 👈 accept it
+  deleteTransaction,
 }: {
   data: Transaction[]
   budgets: Budgets
-  deleteTransaction: ReturnType<typeof api.transactions.delete.useMutation> // 👈 type it
+  deleteTransaction: ReturnType<typeof api.transactions.delete.useMutation>
 }) => {
   const [columnVisibility, setColumnVisibility] = useState({})
   const [rowSelection, setRowSelection] = useState({})
@@ -86,7 +97,7 @@ const TransactionTable = ({
         />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant='outline'>
+            <Button variant='green'>
               Columns <ChevronDown />
             </Button>
           </DropdownMenuTrigger>
@@ -174,11 +185,14 @@ const TransactionTable = ({
                 )
               ) {
                 const selectedRows = table.getFilteredSelectedRowModel().rows
+
                 await Promise.all(
                   selectedRows.map((row) => deleteTransaction.mutateAsync({ id: row.original.id, })
                   )
                 )
+
                 await utils.transactions.getAll.invalidate()
+                setRowSelection({})
               }
             }}
           >

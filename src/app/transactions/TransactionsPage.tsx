@@ -19,7 +19,7 @@ const TransactionsPage = () => {
 
   return (
     <div className='flex flex-col items-center my-12'>
-      <div>
+      <div className='flex flex-col items-center'>
         <h2 className='text-2xl font-semibold mb-4'>Add New Transaction</h2>
         <TransactionForm onSuccess={() => utils.transactions.getAll.invalidate()} />
       </div>
