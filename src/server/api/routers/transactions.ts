@@ -36,9 +36,12 @@ export const transactionRouter = createTRPCRouter({
   }),
 
   getExpenseBreakdown: protectedProcedure
-    .input(z.object({ month: z.string().optional(), year: z.string().optional(), })) // Accepts both month and year
+    .input(z.object({
+      startDate: z.string().optional(),
+      endDate: z.string().optional(),
+    }))
     .query(async ({ ctx, input, }) => {
-      const { month, year, } = input
+      const { startDate, endDate, } = input
 
       const result = await db
         .select({
@@ -50,13 +53,9 @@ export const transactionRouter = createTRPCRouter({
           and(
             eq(transactions.userId, ctx.session.user.id),
             eq(transactions.paymentType, 'expense'),
-            // Filter by year and month if provided
-            year
-              ? sql`EXTRACT(YEAR FROM ${transactions.paidDate}) = ${parseInt(year, 10)}`
-              : sql`1 = 1`, // Default condition if no year is provided
-            month
-              ? sql`EXTRACT(MONTH FROM ${transactions.paidDate}) = ${parseInt(month, 10)}`
-              : sql`1 = 1` // Default condition if no month is provided
+            // Ensure the startDate and endDate are parsed and compared in UTC
+            startDate ? sql`${transactions.paidDate} >= ${startDate}::timestamp with time zone` : sql`1 = 1`,
+            endDate ? sql`${transactions.paidDate} <= ${endDate}::timestamp with time zone` : sql`1 = 1`
           )
         )
         .groupBy(transactions.category)

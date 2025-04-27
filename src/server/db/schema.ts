@@ -62,13 +62,12 @@ export const transactions = createTable('transaction', (d) => ({
   paymentName: d.text('payment_name').notNull(),
   paymentType: d.text('payment_type').notNull().$type<'income' | 'expense'>(),
   amount: decimal('amount', { precision: 10, scale: 2, }).notNull().$type<number>(),
-  paidDate: d.timestamp('paid_date', { mode: 'date', withTimezone: false, }).notNull(),
+  paidDate: d.timestamp('paid_date', { withTimezone: true, }).notNull(),
   budgetId: d.uuid('budgetId').references(() => budgets.id),
   category: d.text('category'),
-  createdAt: d.timestamp('created_at', { mode: 'date', withTimezone: false, }).defaultNow(),
+  createdAt: d.timestamp('created_at', { withTimezone: true, }).defaultNow(),
 }))
 
-// Correct relations definition
 export const transactionsRelations = relations(
   transactions,
   ({ one, many, }) => ({
