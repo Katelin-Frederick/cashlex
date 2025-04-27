@@ -1,4 +1,4 @@
-import { sql, and, eq, } from 'drizzle-orm'
+import { sql, eq, } from 'drizzle-orm'
 import { z, } from 'zod'
 
 import { protectedProcedure, createTRPCRouter, } from '~/server/api/trpc'
@@ -15,51 +15,24 @@ const createTransactionSchema = z.object({
 })
 
 export const transactionRouter = createTRPCRouter({
-  getTotalIncome: protectedProcedure.query(async ({ ctx, }) => {
+  getSummary: protectedProcedure.query(async ({ ctx, }) => {
     const result = await db
-      .select({ totalIncome: sql`SUM(${transactions.amount})`.as('totalIncome'), })
+      .select({
+        income: sql`SUM(CASE WHEN ${transactions.paymentType} = 'income' THEN ${transactions.amount} ELSE 0 END)`.as('income'),
+        expense: sql`SUM(CASE WHEN ${transactions.paymentType} = 'expense' THEN ${transactions.amount} ELSE 0 END)`.as('expense'),
+      })
       .from(transactions)
-      .where(
-        and(
-          eq(transactions.userId, ctx.session.user.id)
-        )
-      )
+      .where(eq(transactions.userId, ctx.session.user.id))
 
-    const totalIncome = result.length > 0 ? Number(result[0]?.totalIncome ?? 0) : 0
+    const income = Number(result[0]?.income ?? 0)
+    const expense = Number(result[0]?.expense ?? 0)
+    const netTotal = income - expense
 
-    return { totalIncome, }
-  }),
-
-  getAllIncome: protectedProcedure.query(async ({ ctx, }) => {
-    const result = await db
-      .select({ allIncome: sql`SUM(${transactions.amount})`.as('allIncome'), })
-      .from(transactions)
-      .where(
-        and(
-          eq(transactions.userId, ctx.session.user.id),
-          eq(transactions.paymentType, 'income')
-        )
-      )
-
-    const allIncome = result.length > 0 ? Number(result[0]?.allIncome ?? 0) : 0
-
-    return { allIncome, }
-  }),
-
-  getAllExpenses: protectedProcedure.query(async ({ ctx, }) => {
-    const result = await db
-      .select({ allExpenses: sql`SUM(${transactions.amount})`.as('allExpenses'), })
-      .from(transactions)
-      .where(
-        and(
-          eq(transactions.userId, ctx.session.user.id),
-          eq(transactions.paymentType, 'expense')
-        )
-      )
-
-    const allExpenses = result.length > 0 ? Number(result[0]?.allExpenses ?? 0) : 0
-
-    return { allExpenses, }
+    return {
+      netTotal,
+      income,
+      expense,
+    }
   }),
 
   getAll: protectedProcedure.query(async ({ ctx, }) => db

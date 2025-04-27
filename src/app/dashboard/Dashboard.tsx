@@ -11,20 +11,10 @@ const Dashboard = () => {
   const router = useRouter()
 
   const {
-    data: totalIncomeData,
+    data: transactionSummary,
     isLoading,
     error,
-  } = api.transactions.getTotalIncome.useQuery()
-  const {
-    data: allIncomeData,
-    isLoading: isAllIncomeDataLoading,
-    error: allIncomeDataError,
-  } = api.transactions.getAllIncome.useQuery()
-  const {
-    data: allExpensesData,
-    isLoading: isAllExpensesDataLoading,
-    error: allExpensesDataError,
-  } = api.transactions.getAllExpenses.useQuery()
+  } = api.transactions.getSummary.useQuery()
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -36,9 +26,9 @@ const Dashboard = () => {
     return <div>Loading...</div>
   }
 
-  const totalIncome = totalIncomeData ? totalIncomeData.totalIncome : 0
-  const allIncome = allIncomeData ? allIncomeData.allIncome : 0
-  const allExpenses = allExpensesData ? allExpensesData.allExpenses : 0
+  const totalIncome = transactionSummary ? transactionSummary.netTotal : 0
+  const allIncome = transactionSummary ? transactionSummary.income : 0
+  const allExpenses = transactionSummary ? transactionSummary.expense : 0
 
   if (isLoading) {
     return <p>Loading total income...</p>
