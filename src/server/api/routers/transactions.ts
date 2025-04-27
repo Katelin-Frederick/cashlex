@@ -1,4 +1,4 @@
-import { sql, eq, } from 'drizzle-orm'
+import { sql, and, eq, } from 'drizzle-orm'
 import { z, } from 'zod'
 
 import { protectedProcedure, createTRPCRouter, } from '~/server/api/trpc'
@@ -34,6 +34,38 @@ export const transactionRouter = createTRPCRouter({
       expense,
     }
   }),
+
+  getExpenseBreakdown: protectedProcedure
+    .input(z.object({ month: z.string().optional(), year: z.string().optional(), })) // Accepts both month and year
+    .query(async ({ ctx, input, }) => {
+      const { month, year, } = input
+
+      const result = await db
+        .select({
+          category: transactions.category,
+          total: sql`SUM(${transactions.amount})`.as('total'),
+        })
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.userId, ctx.session.user.id),
+            eq(transactions.paymentType, 'expense'),
+            // Filter by year and month if provided
+            year
+              ? sql`EXTRACT(YEAR FROM ${transactions.paidDate}) = ${parseInt(year, 10)}`
+              : sql`1 = 1`, // Default condition if no year is provided
+            month
+              ? sql`EXTRACT(MONTH FROM ${transactions.paidDate}) = ${parseInt(month, 10)}`
+              : sql`1 = 1` // Default condition if no month is provided
+          )
+        )
+        .groupBy(transactions.category)
+
+      return result.map((row) => ({
+        name: row.category && row.category.trim() !== '' ? row.category : 'Uncategorized',
+        value: Number(row.total),
+      }))
+    }),
 
   getAll: protectedProcedure.query(async ({ ctx, }) => db
     .select()
