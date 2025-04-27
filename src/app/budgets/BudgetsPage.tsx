@@ -21,7 +21,7 @@ const BudgetsPage = () => {
 
   const query = api.budget.getAll.useQuery(undefined, {
     enabled: status === 'authenticated',
-    staleTime: 0, // always consider cache stale to trigger fresh fetch
+    staleTime: 0,
   })
 
   const { data: budgets = [], isLoading, } = query

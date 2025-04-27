@@ -1,4 +1,4 @@
-import { sql, eq, } from 'drizzle-orm'
+import { sql, and, eq, } from 'drizzle-orm'
 import { z, } from 'zod'
 
 import { protectedProcedure, createTRPCRouter, } from '~/server/api/trpc'
@@ -6,20 +6,37 @@ import { transactions, budgets, } from '~/server/db/schema'
 import { db, } from '~/server/db'
 
 const createTransactionSchema = z.object({
-  paymentName: z.string().min(2),
+  paymentName: z.string().min(2, { message: 'Payment name must be at least 2 characters.', }),
   paymentType: z.enum(['income', 'expense']),
-  amount: z.number().positive(),
+  amount: z.number().positive({ message: 'Amount must be positive.', }),
   paidDate: z.date(),
   budgetId: z.string().uuid().nullable().optional(),
   category: z.string().optional(),
 })
 
 export const transactionRouter = createTRPCRouter({
+  getTotalIncome: protectedProcedure.query(async ({ ctx, }) => {
+    const result = await db
+      .select({ totalIncome: sql`SUM(${transactions.amount})`.as('totalIncome'), })
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.userId, ctx.session.user.id),
+          eq(transactions.paymentType, 'income')
+        )
+      )
+
+    const totalIncome = result.length > 0 ? Number(result[0]?.totalIncome ?? 0) : 0
+
+    return { totalIncome, }
+  }),
+
   getAll: protectedProcedure.query(async ({ ctx, }) => db
     .select()
     .from(transactions)
     .where(eq(transactions.userId, ctx.session.user.id))
-    .orderBy(transactions.paidDate)),
+    .orderBy(transactions.paidDate)
+  ),
 
   create: protectedProcedure
     .input(createTransactionSchema)
@@ -51,9 +68,30 @@ export const transactionRouter = createTRPCRouter({
   delete: protectedProcedure
     .input(z.object({ id: z.string().uuid(), }))
     .mutation(async ({ ctx, input, }) => {
-      const result = await db
-        .delete(transactions)
+      const transaction = await db
+        .select()
+        .from(transactions)
         .where(eq(transactions.id, input.id))
-      return result
+        .limit(1)
+        .then((result) => result[0])
+
+      if (!transaction) {
+        throw new Error('Transaction not found')
+      }
+
+      const { budgetId, amount, paymentType, } = transaction
+
+      await ctx.db.transaction(async (tx) => {
+        if (paymentType === 'expense' && budgetId) {
+          await tx
+            .update(budgets)
+            .set({ spent: sql`${budgets.spent} - ${amount}`, })
+            .where(eq(budgets.id, budgetId))
+        }
+
+        await tx.delete(transactions).where(eq(transactions.id, input.id))
+      })
+
+      return { success: true, }
     }),
 })
