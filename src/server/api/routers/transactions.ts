@@ -53,7 +53,36 @@ export const transactionRouter = createTRPCRouter({
           and(
             eq(transactions.userId, ctx.session.user.id),
             eq(transactions.paymentType, 'expense'),
-            // Ensure the startDate and endDate are parsed and compared in UTC
+            startDate ? sql`${transactions.paidDate} >= ${startDate}::timestamp with time zone` : sql`1 = 1`,
+            endDate ? sql`${transactions.paidDate} <= ${endDate}::timestamp with time zone` : sql`1 = 1`
+          )
+        )
+        .groupBy(transactions.category)
+
+      return result.map((row) => ({
+        name: row.category && row.category.trim() !== '' ? row.category : 'Uncategorized',
+        value: Number(row.total),
+      }))
+    }),
+
+  getIncomeBreakdown: protectedProcedure
+    .input(z.object({
+      startDate: z.string().optional(),
+      endDate: z.string().optional(),
+    }))
+    .query(async ({ ctx, input, }) => {
+      const { startDate, endDate, } = input
+
+      const result = await db
+        .select({
+          category: transactions.category,
+          total: sql`SUM(${transactions.amount})`.as('total'),
+        })
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.userId, ctx.session.user.id),
+            eq(transactions.paymentType, 'income'),
             startDate ? sql`${transactions.paidDate} >= ${startDate}::timestamp with time zone` : sql`1 = 1`,
             endDate ? sql`${transactions.paidDate} <= ${endDate}::timestamp with time zone` : sql`1 = 1`
           )
