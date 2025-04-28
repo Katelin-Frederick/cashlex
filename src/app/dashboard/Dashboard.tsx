@@ -1,10 +1,14 @@
 'use client'
 
+import { zodResolver, } from '@hookform/resolvers/zod'
 import React, { useEffect, useState, } from 'react'
 import { useSession, } from 'next-auth/react'
 import { useRouter, } from 'next/navigation'
+import { useForm, } from 'react-hook-form'
 import { format, } from 'date-fns'
+import { z, } from 'zod'
 
+import { FormControl, FormMessage, FormField, FormLabel, FormItem, Form, } from '~/components/ui/form'
 import { PopoverContent, PopoverTrigger, Popover, } from '~/components/ui/popover'
 import ExpensesRingChart from '~/components/Charts/ExpensesPieChart'
 import { Calendar, } from '~/components/ui/calendar'
@@ -34,6 +38,23 @@ const Dashboard = () => {
     }
   )
 
+  const expensesOverviewSchema = z.object({
+    startDate: z.date({ required_error: 'Start Date is required.', }),
+    endDate: z.date({ required_error: 'End Date is required.', }),
+  })
+
+  type ExpensesOverviewFormValues = z.infer<typeof expensesOverviewSchema>
+
+  const form = useForm({
+    resolver: zodResolver(expensesOverviewSchema),
+    defaultValues: {
+      startDate: defaultStartDate,
+      endDate: defaultEndDate,
+    },
+  })
+
+  const { handleSubmit, setValue, } = form
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login')
@@ -56,24 +77,8 @@ const Dashboard = () => {
     return <p>Error loading total income: {error.message}</p>
   }
 
-  const handleStartDateChange = (date: Date | undefined) => {
-    if (date) {
-      const adjustedStartDate = new Date(date)
-      adjustedStartDate.setHours(0, 0, 0, 0)
-      setStartDate(adjustedStartDate)
-    } else {
-      setStartDate(undefined)
-    }
-  }
-
-  const handleEndDateChange = (date: Date | undefined) => {
-    if (date) {
-      const adjustedEndDate = new Date(date)
-      adjustedEndDate.setHours(23, 59, 59, 999)
-      setEndDate(adjustedEndDate)
-    } else {
-      setEndDate(undefined)
-    }
+  const onSubmit = (data: ExpensesOverviewFormValues) => {
+    console.log('Form Submitted with: ', data)
   }
 
   return (
@@ -88,44 +93,86 @@ const Dashboard = () => {
             <p>All Expenses: ${allExpenses}</p>
           </div>
 
-          <div className='mt-4'>
-            <label htmlFor='startDate' className='mr-2'>Start Date:</label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant='outline' className='w-full pl-3 text-left'>
-                  {startDate ? format(startDate, 'PPP') : 'Select start date'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className='w-auto p-0' align='start'>
-                <Calendar
-                  mode='single'
-                  selected={startDate}
-                  onSelect={(date) => handleStartDateChange(date)}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
+          {/* Form */}
+          <Form {...form}>
+            <form onSubmit={handleSubmit(onSubmit)} className='flex flex-col gap-4'>
+              {/* Start Date Form Field */}
+              <FormField
+                name='startDate'
+                render={({ field, }) => (
+                  <FormItem>
+                    <FormLabel>Start Date</FormLabel>
+                    <FormControl>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant='outline'
+                            className='w-full pl-3 text-left'
+                          >
+                            {startDate ? format(startDate, 'PPP') : 'Select start date'}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className='w-auto p-0' align='start'>
+                          <Calendar
+                            mode='single'
+                            selected={startDate}
+                            onSelect={(date) => {
+                              if (date) {
+                                setStartDate(new Date(date))
+                                setValue('startDate', new Date(date))
+                              }
+                            }}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <div className='mt-4'>
-            <label htmlFor='endDate' className='mr-2'>End Date:</label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant='outline' className='w-full pl-3 text-left'>
-                  {endDate ? format(endDate, 'PPP') : 'Select end date'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className='w-auto p-0' align='start'>
-                <Calendar
-                  mode='single'
-                  selected={endDate}
-                  onSelect={(date) => handleEndDateChange(date)}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
+              {/* End Date Form Field */}
+              <FormField
+                name='endDate'
+                render={({ field, }) => (
+                  <FormItem>
+                    <FormLabel>End Date</FormLabel>
+                    <FormControl>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant='outline'
+                            className='w-full pl-3 text-left'
+                          >
+                            {endDate ? format(endDate, 'PPP') : 'Select end date'}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className='w-auto p-0' align='start'>
+                          <Calendar
+                            mode='single'
+                            selected={endDate}
+                            onSelect={(date) => {
+                              if (date) {
+                                setEndDate(new Date(date))
+                                setValue('endDate', new Date(date))
+                              }
+                            }}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
+              <Button type='submit'>Submit</Button>
+            </form>
+          </Form>
+
+          {/* Expenses Breakdown */}
           {!isExpenseLoading && expenseData && expenseData.length > 0 && (
             <div className='mt-8'>
               <h2 className='text-lg font-semibold mb-4'>Expenses Breakdown</h2>
