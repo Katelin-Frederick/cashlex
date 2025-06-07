@@ -1,3 +1,4 @@
+import { differenceInMonths, startOfMonth, addMonths, parseISO, format, } from 'date-fns'
 import { sql, and, eq, } from 'drizzle-orm'
 import { z, } from 'zod'
 
@@ -93,6 +94,66 @@ export const transactionRouter = createTRPCRouter({
         name: row.category && row.category.trim() !== '' ? row.category : 'Uncategorized',
         value: Number(row.total),
       }))
+    }),
+
+  getMonthlyBreakdown: protectedProcedure
+    .input(z.object({
+      startDate: z.string().optional(),
+      endDate: z.string().optional(),
+    }))
+    .query(async ({ ctx, input, }) => {
+      const endDate = input.endDate
+        ? startOfMonth(parseISO(input.endDate))
+        : startOfMonth(new Date())
+
+      const startDate = input.startDate
+        ? startOfMonth(parseISO(input.startDate))
+        : startOfMonth(addMonths(endDate, -4)) // fallback last 5 months
+
+      // Calculate how many months between start and end dates (inclusive)
+      const monthsDiff = differenceInMonths(endDate, startDate) + 1
+
+      // Generate array of months from startDate to endDate
+      const months = []
+      for (let i = 0; i < monthsDiff; i++) {
+        const date = addMonths(startDate, i)
+        months.push(format(date, 'yyyy-MM'))
+      }
+
+      // Format safeStartDate and safeEndDate for SQL filter
+      const safeStartDate = format(startDate, 'yyyy-MM-dd')
+      const safeEndDate = format(addMonths(endDate, 1), 'yyyy-MM-dd')
+
+      const result = await db
+        .select({
+          month: sql`TO_CHAR(${transactions.paidDate}, 'YYYY-MM')`.as('month'),
+          income: sql`SUM(CASE WHEN ${transactions.paymentType} = 'income' THEN ${transactions.amount} ELSE 0 END)`.as('income'),
+          expense: sql`SUM(CASE WHEN ${transactions.paymentType} = 'expense' THEN ${transactions.amount} ELSE 0 END)`.as('expense'),
+        })
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.userId, ctx.session.user.id),
+            sql`${transactions.paidDate} >= ${safeStartDate}::timestamp`,
+            sql`${transactions.paidDate} < ${safeEndDate}::timestamp`
+          )
+        )
+        .groupBy(sql`TO_CHAR(${transactions.paidDate}, 'YYYY-MM')`)
+
+      // Map results to month keys
+      const resultMap = new Map(result.map(r => [r.month, r]))
+
+      // Fill in months with data or zeroes
+      const filled = months.map(month => {
+        const match = resultMap.get(month)
+        return {
+          month,
+          income: match ? Number(match.income) : 0,
+          expense: match ? Number(match.expense) : 0,
+        }
+      })
+
+      return filled
     }),
 
   getAll: protectedProcedure.query(async ({ ctx, }) => db
