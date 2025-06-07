@@ -19,11 +19,11 @@ const Dashboard = () => {
 
   // Set endDate to the last full month (current month - 1)
   const endDate = new Date(currentDate)
-  endDate.setMonth(currentDate.getMonth() - 1)
+  endDate.setMonth(currentDate.getMonth())
 
   // Set startDate to five months ago from the current date
   const startDate = new Date(currentDate)
-  startDate.setMonth(currentDate.getMonth() - 5)
+  startDate.setMonth(currentDate.getMonth() - 4)
 
   const formattedStartMonth = `${startDate.getFullYear()}-${(startDate.getMonth() + 1)
     .toString()
@@ -52,7 +52,7 @@ const Dashboard = () => {
     return <div>Loading...</div>
   }
 
-  const totalIncome = transactionSummary ? transactionSummary.netTotal : 0
+  const totalBalance = transactionSummary ? transactionSummary.netTotal : 0
   const allIncome = transactionSummary ? transactionSummary.income : 0
   const allExpenses = transactionSummary ? transactionSummary.expense : 0
 
@@ -81,10 +81,13 @@ const Dashboard = () => {
           <p>Welcome, {session.user?.name}!</p>
 
           <div>
-            <p>Total Income: ${totalIncome}</p>
             <p>All Income: ${allIncome}</p>
             <p>All Expenses: ${allExpenses}</p>
+            <p>Total Balance: ${totalBalance}</p>
           </div>
+
+          <ExpensesSummary />
+          <IncomeSummary />
 
           {/* Month range picker form */}
           <form>
@@ -109,10 +112,9 @@ const Dashboard = () => {
           </form>
 
           {/* Render the chart with the selected month range */}
-          {startMonthState && endMonthState && <IncomeExpenseBarChart data={monthlyBreakdown} />}
-
-          <ExpensesSummary />
-          <IncomeSummary />
+          {startMonthState && endMonthState && monthlyBreakdown && (
+            <IncomeExpenseBarChart data={monthlyBreakdown} />
+          )}
         </div>
       ) : (
         <p>You are not logged in. Please log in to view this page.</p>

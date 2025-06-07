@@ -12,7 +12,7 @@ export const createTable = pgTableCreator((name) => `cashlex_${name}`)
 
 export const users = createTable('user', () => ({
   id: uuid('id').primaryKey().defaultRandom(),
-  username: text('username', { nullable: true, }).unique(),
+  username: text('username').unique(),
   email: text('email').notNull().unique(),
   passwordHash: text('password_hash'),
   name: text('name'),
@@ -72,7 +72,7 @@ export const transactionsRelations = relations(
   transactions,
   ({ one, many, }) => ({
     user: one(users, { fields: [transactions.userId], references: [users.id], }),
-    budget: one(budgets, { fields: [transactions.budgetId], references: [budgets.id], nullable: true, }),
+    budget: one(budgets, { fields: [transactions.budgetId], references: [budgets.id], }),
   })
 )
 
