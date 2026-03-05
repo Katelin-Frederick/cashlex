@@ -1,5 +1,6 @@
 'use client'
 
+import { keepPreviousData, } from '@tanstack/react-query'
 import { zodResolver, } from '@hookform/resolvers/zod'
 import { useForm, } from 'react-hook-form'
 import { useState, } from 'react'
@@ -61,6 +62,8 @@ const WALLET_TYPE_COLORS: Record<WalletType, string> = {
   CASH: 'bg-amber-100 text-amber-700',
   INVESTMENT: 'bg-violet-100 text-violet-700',
 }
+
+const PAGE_SIZE = 9 // 3-column grid looks best with multiples of 3
 
 // ── Zod schema ───────────────────────────────────────────────────────
 
@@ -151,7 +154,6 @@ const WalletForm = ({
                     placeholder='0.00'
                     {...field}
                     onChange={(e) => {
-                      // Strip everything except digits and a single decimal point
                       const raw = e.target.value.replace(/[^0-9.]/g, '')
                       const parts = raw.split('.')
                       const sanitized = parts.length > 2
@@ -194,20 +196,29 @@ type Wallet = {
 export const WalletsClient = () => {
   const utils = api.useUtils()
 
-  const { data: wallets = [], isLoading, } = api.wallet.list.useQuery()
-
-  // Dialog state
+  const [page, setPage] = useState(1)
   const [createOpen, setCreateOpen] = useState(false)
   const [editWallet, setEditWallet] = useState<Wallet | null>(null)
   const [deleteWallet, setDeleteWallet] = useState<Wallet | null>(null)
 
-  // Mutations — each one invalidates the list on success
-  const invalidate = () => utils.wallet.list.invalidate()
+  const { data, isLoading, isFetching, } = api.wallet.listPaginated.useQuery(
+    { page, pageSize: PAGE_SIZE, },
+    { placeholderData: keepPreviousData, }
+  )
+
+  const wallets = data?.items ?? []
+  const pageCount = data?.pageCount ?? 1
+  const total = data?.total ?? 0
+
+  const invalidate = async () => {
+    await Promise.all([
+      utils.wallet.listPaginated.invalidate(),
+      utils.wallet.list.invalidate()
+    ])
+  }
 
   const create = api.wallet.create.useMutation({onSuccess: () => { setCreateOpen(false); void invalidate() },})
-
   const update = api.wallet.update.useMutation({onSuccess: () => { setEditWallet(null); void invalidate() },})
-
   const remove = api.wallet.delete.useMutation({onSuccess: () => { setDeleteWallet(null); void invalidate() },})
 
   const formatBalance = (balance: number, currency: string) => new Intl.NumberFormat('en-US', { style: 'currency', currency, }).format(balance)
@@ -244,7 +255,7 @@ export const WalletsClient = () => {
       )}
 
       {/* Wallet grid */}
-      <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3'>
+      <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 transition-opacity ${isFetching ? 'opacity-60' : ''}`}>
         {wallets.map((wallet) => (
           <Card key={wallet.id}>
             <CardHeader className='pb-2'>
@@ -284,6 +295,34 @@ export const WalletsClient = () => {
           </Card>
         ))}
       </div>
+
+      {/* Pagination */}
+      {pageCount > 1 && (
+        <div className='mt-6 flex items-center justify-between'>
+          <p className='text-muted-foreground text-sm'>{total} wallets total</p>
+          <div className='flex items-center gap-2'>
+            <Button
+              disabled={page <= 1 || isFetching}
+              size='sm'
+              variant='outline'
+              onClick={() => setPage((p) => p - 1)}
+            >
+              Previous
+            </Button>
+            <span className='text-muted-foreground text-sm'>
+              Page {page} of {pageCount}
+            </span>
+            <Button
+              disabled={page >= pageCount || isFetching}
+              size='sm'
+              variant='outline'
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Create dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
