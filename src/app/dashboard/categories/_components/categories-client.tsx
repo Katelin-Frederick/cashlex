@@ -1,5 +1,6 @@
 'use client'
 
+import { keepPreviousData, } from '@tanstack/react-query'
 import { useState, } from 'react'
 
 import {
@@ -40,29 +41,47 @@ type Category = {
   _count: { transactions: number }
 }
 
+const PAGE_SIZE = 10
+
 // ── Main client component ─────────────────────────────────────────────
 
 export const CategoriesClient = () => {
   const utils = api.useUtils()
 
-  const { data: categories = [], isLoading, } = api.category.list.useQuery()
-
   const [filter, setFilter] = useState<Filter>('ALL')
+  const [page, setPage] = useState(1)
   const [createOpen, setCreateOpen] = useState(false)
   const [editCategory, setEditCategory] = useState<Category | null>(null)
   const [deleteCategory, setDeleteCategory] = useState<Category | null>(null)
 
-  const invalidate = () => utils.category.list.invalidate()
+  const { data, isLoading, isFetching, } = api.category.listPaginated.useQuery(
+    {
+      page,
+      pageSize: PAGE_SIZE,
+      type: filter === 'ALL' ? undefined : filter,
+    },
+    { placeholderData: keepPreviousData, }
+  )
 
-  const create = api.category.create.useMutation({onSuccess: () => { setCreateOpen(false); void invalidate() },})
+  const categories = data?.items ?? []
+  const pageCount = data?.pageCount ?? 1
+  const total = data?.total ?? 0
 
-  const update = api.category.update.useMutation({onSuccess: () => { setEditCategory(null); void invalidate() },})
+  const handleFilterChange = (v: string) => {
+    setFilter(v as Filter)
+    setPage(1)
+  }
 
-  const remove = api.category.delete.useMutation({onSuccess: () => { setDeleteCategory(null); void invalidate() },})
+  const invalidate = async () => {
+    await Promise.all([
+      utils.category.listPaginated.invalidate(),
+      utils.category.list.invalidate()
+    ])
+  }
 
-  const filtered = filter === 'ALL'
-    ? categories
-    : categories.filter((c) => c.type === filter)
+  const create = api.category.create.useMutation({ onSuccess: () => { setCreateOpen(false); void invalidate() }, })
+  const update = api.category.update.useMutation({ onSuccess: () => { setEditCategory(null); void invalidate() }, })
+  const remove = api.category.delete.useMutation({ onSuccess: () => { setDeleteCategory(null); void invalidate() }, })
 
   if (isLoading) {
     return (
@@ -86,11 +105,7 @@ export const CategoriesClient = () => {
       </div>
 
       {/* Filter tabs */}
-      <Tabs
-        value={filter}
-        onValueChange={(v) => setFilter(v as Filter)}
-        className='mb-6'
-      >
+      <Tabs value={filter} onValueChange={handleFilterChange} className='mb-6'>
         <TabsList>
           <TabsTrigger value='ALL'>All</TabsTrigger>
           <TabsTrigger value='INCOME'>{TYPE_LABELS.INCOME}</TabsTrigger>
@@ -100,7 +115,7 @@ export const CategoriesClient = () => {
       </Tabs>
 
       {/* Empty state */}
-      {filtered.length === 0 && (
+      {categories.length === 0 && (
         <div className='flex flex-col items-center justify-center rounded-xl border border-dashed py-20 text-center'>
           <p className='text-muted-foreground text-sm'>
             {filter === 'ALL' ? 'No categories yet.' : `No ${TYPE_LABELS[filter].toLowerCase()} categories yet.`}
@@ -112,8 +127,8 @@ export const CategoriesClient = () => {
       )}
 
       {/* Category list */}
-      <div className='space-y-2'>
-        {filtered.map((category) => (
+      <div className={`space-y-2 transition-opacity ${isFetching ? 'opacity-60' : ''}`}>
+        {categories.map((category) => (
           <div
             key={category.id}
             className='flex items-center gap-4 rounded-lg border bg-white px-4 py-3'
@@ -157,6 +172,34 @@ export const CategoriesClient = () => {
         ))}
       </div>
 
+      {/* Pagination */}
+      {pageCount > 1 && (
+        <div className='mt-4 flex items-center justify-between'>
+          <p className='text-muted-foreground text-sm'>{total} categories total</p>
+          <div className='flex items-center gap-2'>
+            <Button
+              disabled={page <= 1 || isFetching}
+              size='sm'
+              variant='outline'
+              onClick={() => setPage((p) => p - 1)}
+            >
+              Previous
+            </Button>
+            <span className='text-muted-foreground text-sm'>
+              Page {page} of {pageCount}
+            </span>
+            <Button
+              disabled={page >= pageCount || isFetching}
+              size='sm'
+              variant='outline'
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Create dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
@@ -165,7 +208,7 @@ export const CategoriesClient = () => {
           </DialogHeader>
           <CategoryForm
             defaultValues={{
-              name: '', type: 'EXPENSE', icon: '', color: '', 
+              name: '', type: 'EXPENSE', icon: '', color: '',
             }}
             isPending={create.isPending}
             submitLabel='Create'

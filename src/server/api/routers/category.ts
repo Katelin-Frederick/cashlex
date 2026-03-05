@@ -5,6 +5,11 @@ import { protectedProcedure, createTRPCRouter, } from '~/server/api/trpc'
 
 const transactionTypeSchema = z.enum(['INCOME', 'EXPENSE', 'TRANSFER'])
 
+const paginationSchema = z.object({
+  page: z.number().int().min(1).default(1),
+  pageSize: z.number().int().min(1).max(100).default(10),
+})
+
 export const categoryRouter = createTRPCRouter({
   list: protectedProcedure.query(async ({ ctx, }) => ctx.db.category.findMany({
     where: { userId: ctx.session.user.id, },
@@ -12,6 +17,27 @@ export const categoryRouter = createTRPCRouter({
     orderBy: [{ type: 'asc', }, { name: 'asc', }],
   })
   ),
+
+  listPaginated: protectedProcedure
+    .input(paginationSchema.extend({type: transactionTypeSchema.optional(),}))
+    .query(async ({ ctx, input, }) => {
+      const where = {
+        userId: ctx.session.user.id,
+        ...(input.type ? { type: input.type, } : {}),
+      }
+      const skip = (input.page - 1) * input.pageSize
+      const [items, total] = await Promise.all([
+        ctx.db.category.findMany({
+          include: { _count: { select: { transactions: true, }, }, },
+          orderBy: [{ type: 'asc', }, { name: 'asc', }],
+          skip,
+          take: input.pageSize,
+          where,
+        }),
+        ctx.db.category.count({ where, })
+      ])
+      return { items, pageCount: Math.ceil(total / input.pageSize), total, }
+    }),
 
   create: protectedProcedure
     .input(z.object({

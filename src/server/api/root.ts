@@ -1,4 +1,5 @@
 import { createCallerFactory, createTRPCRouter, } from '~/server/api/trpc'
+import { transactionRouter, } from '~/server/api/routers/transaction'
 import { categoryRouter, } from '~/server/api/routers/category'
 import { walletRouter, } from '~/server/api/routers/wallet'
 import { authRouter, } from '~/server/api/routers/auth'
@@ -11,6 +12,7 @@ import { authRouter, } from '~/server/api/routers/auth'
 export const appRouter = createTRPCRouter({
   auth: authRouter,
   category: categoryRouter,
+  transaction: transactionRouter,
   wallet: walletRouter,
 })
 
