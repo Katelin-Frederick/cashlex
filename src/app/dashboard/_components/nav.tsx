@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   LogOut,
   PiggyBank,
+  RefreshCcw,
   Tag,
   Wallet,
 } from 'lucide-react'
@@ -19,6 +20,7 @@ const NAV_LINKS = [
   { href: '/dashboard/categories', icon: Tag, label: 'Categories', },
   { href: '/dashboard/transactions', icon: ArrowLeftRight, label: 'Transactions', },
   { href: '/dashboard/budgets', icon: PiggyBank, label: 'Budgets', },
+  { href: '/dashboard/recurring', icon: RefreshCcw, label: 'Recurring', },
 ]
 
 type Props = { userLabel: string }

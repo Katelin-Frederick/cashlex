@@ -89,8 +89,9 @@ model Wallet {
     currency String     @default("USD")
 
     userId       String
-    user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+    user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
     transactions Transaction[]
+    recurringExpenses RecurringExpense[]
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
@@ -182,6 +183,7 @@ model RecurringExpense {
     categoryId String?
     category   Category? @relation(fields: [categoryId], references: [id])
     walletId   String?
+    wallet     Wallet?   @relation(fields: [walletId], references: [id])
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt

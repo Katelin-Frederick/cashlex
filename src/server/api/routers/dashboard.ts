@@ -1,7 +1,7 @@
 import { protectedProcedure, createTRPCRouter, } from '~/server/api/trpc'
 
 export const dashboardRouter = createTRPCRouter({
-  // Summary stats: total balance, this month's income / expenses / net
+  // Summary stats: liquid balance, net worth, this month's income / expenses / net
   stats: protectedProcedure.query(async ({ ctx, }) => {
     const userId = ctx.session.user.id
     const now = new Date()
@@ -9,7 +9,7 @@ export const dashboardRouter = createTRPCRouter({
     const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
 
     const [wallets, income, expenses] = await Promise.all([
-      ctx.db.wallet.findMany({ select: { balance: true, }, where: { userId, }, }),
+      ctx.db.wallet.findMany({ select: { balance: true, type: true, }, where: { userId, }, }),
       ctx.db.transaction.aggregate({
         _sum: { amount: true, },
         where: { date: { gte: monthStart, lte: monthEnd, }, type: 'INCOME', userId, },
@@ -20,15 +20,27 @@ export const dashboardRouter = createTRPCRouter({
       }),
     ])
 
-    const totalBalance = wallets.reduce((sum, w) => sum + w.balance, 0)
+    // Liquid: money you can actually spend today (excludes credit cards and investments)
+    const liquidBalance = wallets
+      .filter((w) => ['CHECKING', 'SAVINGS', 'CASH'].includes(w.type))
+      .reduce((sum, w) => sum + w.balance, 0)
+
+    // Net worth: all balances summed — CREDIT goes negative as you spend so it
+    // naturally subtracts debt; INVESTMENT is included as an asset
+    const netWorth = wallets.reduce((sum, w) => {
+      const contribution = w.type === 'CREDIT' ? Math.min(0, w.balance) : w.balance
+      return sum + contribution
+    }, 0)
+
     const monthlyIncome = income._sum.amount ?? 0
     const monthlyExpenses = expenses._sum.amount ?? 0
 
     return {
+      liquidBalance,
       monthlyExpenses,
       monthlyIncome,
       monthlyNet: monthlyIncome - monthlyExpenses,
-      totalBalance,
+      netWorth,
     }
   }),
 

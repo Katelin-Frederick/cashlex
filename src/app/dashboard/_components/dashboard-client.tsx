@@ -50,8 +50,8 @@ export const DashboardClient = ({ userName, }: Props) => {
 
       {/* Stats row */}
       {statsLoading ? (
-        <div className='grid grid-cols-2 gap-4 lg:grid-cols-4'>
-          {Array.from({ length: 4, }).map((_, i) => (
+        <div className='grid grid-cols-2 gap-4 lg:grid-cols-5'>
+          {Array.from({ length: 5, }).map((_, i) => (
             <Card key={i}>
               <CardHeader className='pb-1'>
                 <div className='h-4 w-24 animate-pulse rounded bg-slate-200' />
@@ -63,8 +63,9 @@ export const DashboardClient = ({ userName, }: Props) => {
           ))}
         </div>
       ) : (
-        <div className='grid grid-cols-2 gap-4 lg:grid-cols-4'>
-          <StatCard label='Total Balance' value={fmt(stats?.totalBalance ?? 0)} />
+        <div className='grid grid-cols-2 gap-4 lg:grid-cols-5'>
+          <StatCard label='Liquid Balance' value={fmt(stats?.liquidBalance ?? 0)} />
+          <StatCard label='Net Worth' value={fmt(stats?.netWorth ?? 0)} />
           <StatCard
             label='Monthly Income'
             value={fmt(stats?.monthlyIncome ?? 0)}

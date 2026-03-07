@@ -1,4 +1,5 @@
 import { createCallerFactory, createTRPCRouter, } from '~/server/api/trpc'
+import { recurringExpenseRouter, } from '~/server/api/routers/recurringExpense'
 import { transactionRouter, } from '~/server/api/routers/transaction'
 import { dashboardRouter, } from '~/server/api/routers/dashboard'
 import { categoryRouter, } from '~/server/api/routers/category'
@@ -16,6 +17,7 @@ export const appRouter = createTRPCRouter({
   budget: budgetRouter,
   category: categoryRouter,
   dashboard: dashboardRouter,
+  recurringExpense: recurringExpenseRouter,
   transaction: transactionRouter,
   wallet: walletRouter,
 })
