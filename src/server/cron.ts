@@ -1,6 +1,9 @@
 import cron from 'node-cron'
 
 import { db, } from '~/server/db'
+import { sendMail, } from '~/server/mailer'
+import { recurringReceiptHtml, recurringReceiptSubject, } from '~/server/emails/recurring-receipt'
+import { fetchWeeklyDigestData, weeklyDigestHtml, weeklyDigestSubject, } from '~/server/emails/weekly-digest'
 
 // ── Date advancement ───────────────────────────────────────────────────
 
@@ -25,6 +28,10 @@ const processDueExpenses = async () => {
   const now = new Date()
 
   const due = await db.recurringExpense.findMany({
+    include: {
+      user: { select: { email: true, name: true, }, },
+      wallet: { select: { name: true, }, },
+    },
     where: { isActive: true, nextDueDate: { lte: now, }, walletId: { not: null, }, },
   })
 
@@ -54,8 +61,7 @@ const processDueExpenses = async () => {
           where: { id: expense.walletId!, },
         })
 
-        // Advance nextDueDate — keep advancing until it's in the future
-        // so missed days don't trigger duplicate catch-up transactions
+        // Advance nextDueDate until it's in the future
         let next = advanceDate(expense.nextDueDate, expense.frequency as Frequency)
         while (next <= now) {
           next = advanceDate(next, expense.frequency as Frequency)
@@ -68,8 +74,52 @@ const processDueExpenses = async () => {
       })
 
       console.log(`[cron] Created transaction for "${expense.name}" ($${expense.amount})`)
+
+      // Send receipt email if user has an email address
+      if (expense.user.email) {
+        const walletName = expense.wallet?.name ?? 'Unknown wallet'
+        await sendMail({
+          html: recurringReceiptHtml({
+            amount: expense.amount,
+            date: expense.nextDueDate,
+            name: expense.name,
+            walletName,
+          }),
+          subject: recurringReceiptSubject(expense.name, expense.amount),
+          to: expense.user.email,
+        })
+        console.log(`[cron] Receipt email sent to ${expense.user.email}`)
+      }
     } catch (err) {
       console.error(`[cron] Failed to process "${expense.name}":`, err)
+    }
+  }
+}
+
+// ── Weekly spending digest ─────────────────────────────────────────────
+
+const sendWeeklyDigests = async () => {
+  console.log('[cron] Sending weekly digest emails…')
+
+  const users = await db.user.findMany({
+    select: { email: true, id: true, },
+    where: { email: { not: null, }, },
+  })
+
+  for (const user of users) {
+    try {
+      const data = await fetchWeeklyDigestData(user.id)
+      if (!data) continue
+
+      await sendMail({
+        html: weeklyDigestHtml(data),
+        subject: weeklyDigestSubject(data.weekStart, data.weekEnd),
+        to: data.userEmail,
+      })
+
+      console.log(`[cron] Weekly digest sent to ${data.userEmail}`)
+    } catch (err) {
+      console.error(`[cron] Failed to send digest to ${user.email ?? 'unknown'}:`, err)
     }
   }
 }
@@ -77,12 +127,17 @@ const processDueExpenses = async () => {
 // ── Start ──────────────────────────────────────────────────────────────
 
 export const startCron = () => {
-  // Run at midnight every day
+  // Midnight daily — process recurring expenses
   cron.schedule('0 0 * * *', () => {
     processDueExpenses().catch((err) => console.error('[cron] Unexpected error:', err))
   })
 
-  // Also process on startup to catch anything missed since last run
+  // 6pm every Sunday — send weekly digest
+  cron.schedule('0 18 * * 0', () => {
+    sendWeeklyDigests().catch((err) => console.error('[cron] Digest error:', err))
+  })
+
+  // Process on startup to catch anything missed since last run
   processDueExpenses().catch((err) => console.error('[cron] Startup processing error:', err))
 
   console.log('[cron] Recurring expense scheduler started')
