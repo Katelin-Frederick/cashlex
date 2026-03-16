@@ -2,6 +2,7 @@
 
 import {
   ArrowLeftRight,
+  BarChart2,
   LayoutDashboard,
   LogOut,
   PiggyBank,
@@ -21,6 +22,7 @@ const NAV_LINKS = [
   { href: '/dashboard/transactions', icon: ArrowLeftRight, label: 'Transactions', },
   { href: '/dashboard/budgets', icon: PiggyBank, label: 'Budgets', },
   { href: '/dashboard/recurring', icon: RefreshCcw, label: 'Recurring', },
+  { href: '/dashboard/reports', icon: BarChart2, label: 'Reports', },
 ]
 
 type Props = { userLabel: string }
@@ -29,7 +31,7 @@ export const Nav = ({ userLabel, }: Props) => {
   const pathname = usePathname()
 
   return (
-    <aside className='flex h-screen w-56 shrink-0 flex-col border-r bg-white'>
+    <aside className='flex h-screen w-56 shrink-0 flex-col border-r bg-white print:hidden'>
       {/* Logo */}
       <div className='flex h-16 items-center border-b px-5'>
         <span className='text-xl font-bold tracking-tight'>Cashlex</span>
