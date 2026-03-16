@@ -13,7 +13,7 @@ export const SpendingDonut = ({ items, }: Props) => {
   if (items.length === 0) {
     return (
       <div className='flex h-full items-center justify-center'>
-        <p className='text-muted-foreground text-sm'>No expense data this month</p>
+        <p className='text-muted-foreground text-sm'>No expense data</p>
       </div>
     )
   }

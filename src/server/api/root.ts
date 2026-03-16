@@ -6,6 +6,7 @@ import { categoryRouter, } from '~/server/api/routers/category'
 import { budgetRouter, } from '~/server/api/routers/budget'
 import { walletRouter, } from '~/server/api/routers/wallet'
 import { authRouter, } from '~/server/api/routers/auth'
+import { reportRouter, } from '~/server/api/routers/report'
 
 /**
  * This is the primary router for your server.
@@ -18,6 +19,7 @@ export const appRouter = createTRPCRouter({
   category: categoryRouter,
   dashboard: dashboardRouter,
   recurringExpense: recurringExpenseRouter,
+  report: reportRouter,
   transaction: transactionRouter,
   wallet: walletRouter,
 })

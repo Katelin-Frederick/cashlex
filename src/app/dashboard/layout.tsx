@@ -11,7 +11,7 @@ const DashboardLayout = async ({ children, }: { children: ReactNode }) => {
   return (
     <div className='flex h-screen overflow-hidden'>
       <Nav userLabel={userLabel} />
-      <main className='flex-1 overflow-y-auto bg-slate-50'>
+      <main className='flex-1 overflow-y-auto bg-slate-50 print:overflow-visible print:w-full'>
         {children}
       </main>
     </div>
