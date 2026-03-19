@@ -46,6 +46,7 @@ export const transactionRouter = createTRPCRouter({
     .input(z.object({
       page: z.number().int().min(1).default(1),
       pageSize: z.number().int().min(1).max(100).default(10),
+      search: z.string().optional(),
       type: transactionTypeSchema.optional(),
       walletId: z.string().optional(),
     }))
@@ -54,6 +55,7 @@ export const transactionRouter = createTRPCRouter({
         userId: ctx.session.user.id,
         ...(input.type ? { type: input.type, } : {}),
         ...(input.walletId ? { walletId: input.walletId, } : {}),
+        ...(input.search ? { description: { contains: input.search, mode: 'insensitive' as const, }, } : {}),
       }
       const skip = (input.page - 1) * input.pageSize
       const [items, total] = await Promise.all([
@@ -61,8 +63,8 @@ export const transactionRouter = createTRPCRouter({
           include: {
             category: {
               select: {
-                color: true, icon: true, id: true, name: true, 
-              }, 
+                color: true, icon: true, id: true, name: true,
+              },
             },
             wallet: { select: { id: true, name: true, type: true, }, },
           },
@@ -101,7 +103,7 @@ export const transactionRouter = createTRPCRouter({
   update: protectedProcedure
     .input(transactionInputSchema.extend({ id: z.string(), }))
     .mutation(({ ctx, input, }) => ctx.db.$transaction(async (prisma) => {
-      const old = await prisma.transaction.findUniqueOrThrow({where: { id: input.id, userId: ctx.session.user.id, },})
+      const old = await prisma.transaction.findUniqueOrThrow({ where: { id: input.id, userId: ctx.session.user.id, }, })
 
       const reverseDelta = -getBalanceDelta(old.type, old.amount)
       const newDelta = getBalanceDelta(input.type, input.amount)
@@ -142,7 +144,7 @@ export const transactionRouter = createTRPCRouter({
   delete: protectedProcedure
     .input(z.object({ id: z.string(), }))
     .mutation(({ ctx, input, }) => ctx.db.$transaction(async (prisma) => {
-      const old = await prisma.transaction.findUniqueOrThrow({where: { id: input.id, userId: ctx.session.user.id, },})
+      const old = await prisma.transaction.findUniqueOrThrow({ where: { id: input.id, userId: ctx.session.user.id, }, })
       await prisma.wallet.update({
         data: { balance: { increment: -getBalanceDelta(old.type, old.amount), }, },
         where: { id: old.walletId, userId: ctx.session.user.id, },
