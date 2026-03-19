@@ -1,7 +1,7 @@
 'use client'
 
 import { keepPreviousData, } from '@tanstack/react-query'
-import { useState, } from 'react'
+import { useState, useEffect, } from 'react'
 
 import {
   AlertDialogDescription,
@@ -28,6 +28,7 @@ import {
 } from '~/components/ui/dialog'
 import { TabsTrigger, TabsList, Tabs, } from '~/components/ui/tabs'
 import { Button, } from '~/components/ui/button'
+import { Input, } from '~/components/ui/input'
 import { api, } from '~/trpc/react'
 
 import type { TransactionFormValues, } from './transaction-form'
@@ -69,7 +70,17 @@ export const TransactionsClient = () => {
 
   const [typeFilter, setTypeFilter] = useState<Filter>('ALL')
   const [walletFilter, setWalletFilter] = useState('ALL')
+  const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [page, setPage] = useState(1)
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search)
+      setPage(1)
+    }, 300)
+    return () => clearTimeout(t)
+  }, [search])
   const [createOpen, setCreateOpen] = useState(false)
   const [editTransaction, setEditTransaction] = useState<Transaction | null>(null)
   const [deleteTransaction, setDeleteTransaction] = useState<Transaction | null>(null)
@@ -82,6 +93,7 @@ export const TransactionsClient = () => {
     {
       page,
       pageSize: PAGE_SIZE,
+      search: debouncedSearch || undefined,
       type: typeFilter === 'ALL' ? undefined : typeFilter,
       walletId: walletFilter === 'ALL' ? undefined : walletFilter,
     },
@@ -159,42 +171,54 @@ export const TransactionsClient = () => {
       </div>
 
       {/* Filters */}
-      <div className='mb-6 flex flex-wrap items-center gap-4'>
-        <Tabs value={typeFilter} onValueChange={handleTypeFilter}>
-          <TabsList>
-            <TabsTrigger value='ALL'>All</TabsTrigger>
-            <TabsTrigger value='INCOME'>{TYPE_LABELS.INCOME}</TabsTrigger>
-            <TabsTrigger value='EXPENSE'>{TYPE_LABELS.EXPENSE}</TabsTrigger>
-            <TabsTrigger value='TRANSFER'>{TYPE_LABELS.TRANSFER}</TabsTrigger>
-          </TabsList>
-        </Tabs>
+      <div className='mb-6 space-y-3'>
+        <Input
+          placeholder='Search by description…'
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className='max-w-sm'
+        />
+        <div className='flex flex-wrap items-center gap-4'>
+          <Tabs value={typeFilter} onValueChange={handleTypeFilter}>
+            <TabsList>
+              <TabsTrigger value='ALL'>All</TabsTrigger>
+              <TabsTrigger value='INCOME'>{TYPE_LABELS.INCOME}</TabsTrigger>
+              <TabsTrigger value='EXPENSE'>{TYPE_LABELS.EXPENSE}</TabsTrigger>
+              <TabsTrigger value='TRANSFER'>{TYPE_LABELS.TRANSFER}</TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-        <Select value={walletFilter} onValueChange={handleWalletFilter}>
-          <SelectTrigger className='w-44'>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value='ALL'>All wallets</SelectItem>
-            {wallets.map((w) => (
-              <SelectItem key={w.id} value={w.id}>
-                {w.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          <Select value={walletFilter} onValueChange={handleWalletFilter}>
+            <SelectTrigger className='w-44'>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value='ALL'>All wallets</SelectItem>
+              {wallets.map((w) => (
+                <SelectItem key={w.id} value={w.id}>
+                  {w.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Empty state */}
       {transactions.length === 0 && (
         <div className='flex flex-col items-center justify-center rounded-xl border border-dashed py-20 text-center'>
           <p className='text-muted-foreground text-sm'>
-            {typeFilter === 'ALL'
-              ? 'No transactions yet.'
-              : `No ${TYPE_LABELS[typeFilter].toLowerCase()} transactions yet.`}
+            {debouncedSearch
+              ? `No transactions matching "${debouncedSearch}".`
+              : typeFilter === 'ALL'
+                ? 'No transactions yet.'
+                : `No ${TYPE_LABELS[typeFilter].toLowerCase()} transactions yet.`}
           </p>
-          <Button className='mt-4' onClick={() => setCreateOpen(true)}>
-            Record your first transaction
-          </Button>
+          {!debouncedSearch && (
+            <Button className='mt-4' onClick={() => setCreateOpen(true)}>
+              Record your first transaction
+            </Button>
+          )}
         </div>
       )}
 
