@@ -29,7 +29,7 @@ const processDueExpenses = async () => {
 
   const due = await db.recurringExpense.findMany({
     include: {
-      user: { select: { email: true, name: true, }, },
+      user: { select: { email: true, emailNotificationsReceipt: true, name: true, }, },
       wallet: { select: { name: true, }, },
     },
     where: { isActive: true, nextDueDate: { lte: now, }, walletId: { not: null, }, },
@@ -84,7 +84,7 @@ const processDueExpenses = async () => {
     }
 
     // ── Receipt email (best-effort, does not affect processing) ──────
-    if (expense.user.email) {
+    if (expense.user.email && expense.user.emailNotificationsReceipt) {
       try {
         const walletName = expense.wallet?.name ?? 'Unknown wallet'
         const totalAmount = expense.amount * dueDates.length
@@ -115,7 +115,7 @@ const sendWeeklyDigests = async () => {
 
   const users = await db.user.findMany({
     select: { email: true, id: true, },
-    where: { email: { not: null, }, },
+    where: { email: { not: null, }, emailNotificationsDigest: true, },
   })
 
   for (const user of users) {

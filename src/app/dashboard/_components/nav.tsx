@@ -1,17 +1,18 @@
 'use client'
 
 import {
-  ArrowLeftRight,
-  BarChart2,
   LayoutDashboard,
-  LogOut,
-  PiggyBank,
+  ArrowLeftRight,
   RefreshCcw,
-  Tag,
+  BarChart2,
+  PiggyBank,
+  Settings,
+  LogOut,
   Wallet,
+  Tag,
 } from 'lucide-react'
-import Link from 'next/link'
 import { usePathname, } from 'next/navigation'
+import Link from 'next/link'
 
 import { signOutAction, } from '~/server/actions/auth'
 
@@ -23,6 +24,7 @@ const NAV_LINKS = [
   { href: '/dashboard/budgets', icon: PiggyBank, label: 'Budgets', },
   { href: '/dashboard/recurring', icon: RefreshCcw, label: 'Recurring', },
   { href: '/dashboard/reports', icon: BarChart2, label: 'Reports', },
+  { href: '/dashboard/settings', icon: Settings, label: 'Settings', }
 ]
 
 type Props = { userLabel: string }
@@ -41,17 +43,16 @@ export const Nav = ({ userLabel, }: Props) => {
       <nav className='flex-1 overflow-y-auto px-3 py-4'>
         <ul className='space-y-1'>
           {NAV_LINKS.map(({ href, icon: Icon, label, }) => {
-            const isActive =
-              href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(href)
+            const isActive
+              = href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(href)
             return (
               <li key={href}>
                 <Link
                   href={href}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                    isActive
-                      ? 'bg-slate-100 text-slate-900'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                  }`}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${isActive
+                    ? 'bg-slate-100 text-slate-900'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    }`}
                 >
                   <Icon className='size-4 shrink-0' />
                   {label}

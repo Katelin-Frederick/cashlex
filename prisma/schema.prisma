@@ -58,6 +58,8 @@ model User {
     image         String?
     password      String?   // hashed — used by credentials provider
     baseCurrency  String    @default("USD")
+    emailNotificationsReceipt Boolean @default(true)
+    emailNotificationsDigest  Boolean @default(true)
 
     accounts          Account[]
     sessions          Session[]
