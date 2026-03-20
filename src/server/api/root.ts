@@ -1,12 +1,13 @@
-import { createCallerFactory, createTRPCRouter, } from '~/server/api/trpc'
 import { recurringExpenseRouter, } from '~/server/api/routers/recurringExpense'
+import { createCallerFactory, createTRPCRouter, } from '~/server/api/trpc'
 import { transactionRouter, } from '~/server/api/routers/transaction'
 import { dashboardRouter, } from '~/server/api/routers/dashboard'
 import { categoryRouter, } from '~/server/api/routers/category'
 import { budgetRouter, } from '~/server/api/routers/budget'
 import { walletRouter, } from '~/server/api/routers/wallet'
-import { authRouter, } from '~/server/api/routers/auth'
 import { reportRouter, } from '~/server/api/routers/report'
+import { authRouter, } from '~/server/api/routers/auth'
+import { userRouter, } from '~/server/api/routers/user'
 
 /**
  * This is the primary router for your server.
@@ -21,6 +22,7 @@ export const appRouter = createTRPCRouter({
   recurringExpense: recurringExpenseRouter,
   report: reportRouter,
   transaction: transactionRouter,
+  user: userRouter,
   wallet: walletRouter,
 })
 

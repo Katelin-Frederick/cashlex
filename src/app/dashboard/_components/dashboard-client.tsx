@@ -1,14 +1,13 @@
 'use client'
 
 import { CardContent, CardHeader, CardTitle, Card, } from '~/components/ui/card'
+import { formatCurrency, CURRENCIES, } from '~/lib/currencies'
 import { api, } from '~/trpc/react'
 
 import { SpendingDonut, } from './spending-donut'
 import { MonthlyBar, } from './monthly-bar'
 
 // ── Helpers ────────────────────────────────────────────────────────────
-
-const fmt = (n: number, opts?: { sign?: boolean }) => `${opts?.sign && n > 0 ? '+' : ''}$${Math.abs(n).toFixed(2)}`
 
 const formatDate = (date: Date) => new Date(date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', })
 
@@ -32,20 +31,55 @@ const StatCard = ({ label, value, valueClass = '', }: StatCardProps) => (
 type Props = { userName: string }
 
 export const DashboardClient = ({ userName, }: Props) => {
+  const utils = api.useUtils()
+
   const { data: stats, isLoading: statsLoading, } = api.dashboard.stats.useQuery()
   const { data: spending = [], } = api.dashboard.spendingByCategory.useQuery()
   const { data: trend = [], } = api.dashboard.monthlyTrend.useQuery()
   const { data: recent = [], } = api.dashboard.recentTransactions.useQuery()
   const { data: budgets = [], } = api.dashboard.activeBudgets.useQuery()
 
+  const updateBaseCurrency = api.user.updateBaseCurrency.useMutation({
+    onSuccess: () => {
+      void utils.dashboard.stats.invalidate()
+      void utils.dashboard.spendingByCategory.invalidate()
+      void utils.dashboard.monthlyTrend.invalidate()
+    },
+  })
+
+  const baseCurrency = stats?.baseCurrency ?? 'USD'
+  const fmt = (n: number, opts?: { sign?: boolean }) => {
+    const abs = formatCurrency(Math.abs(n), baseCurrency)
+    return opts?.sign && n > 0 ? `+${abs}` : abs
+  }
+
   const currentMonth = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric', })
 
   return (
     <div className='mx-auto max-w-6xl px-6 py-10 space-y-8'>
       {/* Header */}
-      <div>
-        <h1 className='text-3xl font-bold'>Welcome back, {userName}</h1>
-        <p className='text-muted-foreground mt-1 text-sm'>{currentMonth} overview</p>
+      <div className='flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between'>
+        <div>
+          <h1 className='text-3xl font-bold'>Welcome back, {userName}</h1>
+          <p className='text-muted-foreground mt-1 text-sm'>{currentMonth} overview</p>
+        </div>
+
+        {/* Base currency selector */}
+        <div className='flex items-center gap-2'>
+          <span className='text-muted-foreground text-sm'>Base currency:</span>
+          <select
+            value={baseCurrency}
+            disabled={updateBaseCurrency.isPending}
+            onChange={(e) => updateBaseCurrency.mutate({ currency: e.target.value, })}
+            className='rounded-md border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-300 disabled:opacity-50'
+          >
+            {CURRENCIES.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.code} — {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Stats row */}
@@ -89,7 +123,7 @@ export const DashboardClient = ({ userName, }: Props) => {
         <Card>
           <CardHeader>
             <CardTitle className='text-base'>Spending by Category</CardTitle>
-            <p className='text-muted-foreground text-xs'>This month</p>
+            <p className='text-muted-foreground text-xs'>This month · {baseCurrency}</p>
           </CardHeader>
           <CardContent className='flex items-center justify-center' style={{ minHeight: 280, }}>
             <div className='w-full max-w-xs'>
@@ -101,7 +135,7 @@ export const DashboardClient = ({ userName, }: Props) => {
         <Card>
           <CardHeader>
             <CardTitle className='text-base'>Income vs Expenses</CardTitle>
-            <p className='text-muted-foreground text-xs'>Last 6 months</p>
+            <p className='text-muted-foreground text-xs'>Last 6 months · {baseCurrency}</p>
           </CardHeader>
           <CardContent style={{ minHeight: 280, }}>
             <MonthlyBar months={trend} />
@@ -138,13 +172,8 @@ export const DashboardClient = ({ userName, }: Props) => {
                       </p>
                     </div>
                   </div>
-                  <span
-                    className={
-                      `shrink-0 text-sm font-semibold ${tx.type === 'INCOME' ? 'text-emerald-600' : 'text-red-500'
-                      }`
-                    }
-                  >
-                    {tx.type === 'INCOME' ? '+' : '-'}${tx.amount.toFixed(2)}
+                  <span className={`shrink-0 text-sm font-semibold ${tx.type === 'INCOME' ? 'text-emerald-600' : 'text-red-500'}`}>
+                    {tx.type === 'INCOME' ? '+' : '−'}{formatCurrency(tx.amount, tx.wallet.currency)}
                   </span>
                 </div>
               ))
@@ -177,7 +206,7 @@ export const DashboardClient = ({ userName, }: Props) => {
                         <span className='font-medium'>{budget.name}</span>
                       </div>
                       <span className={`text-xs ${isOver ? 'text-red-500' : 'text-muted-foreground'}`}>
-                        ${budget.spent.toFixed(2)} / ${budget.amount.toFixed(2)}
+                        {formatCurrency(budget.spent, baseCurrency)} / {formatCurrency(budget.amount, baseCurrency)}
                       </span>
                     </div>
                     <div className='h-1.5 w-full overflow-hidden rounded-full bg-slate-200'>

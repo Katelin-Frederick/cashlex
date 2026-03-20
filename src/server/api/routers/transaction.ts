@@ -31,7 +31,11 @@ export const transactionRouter = createTRPCRouter({
             color: true, icon: true, id: true, name: true,
           },
         },
-        wallet: { select: { id: true, name: true, type: true, }, },
+        wallet: {
+          select: {
+            currency: true, id: true, name: true, type: true,
+          },
+        },
       },
       orderBy: { date: 'desc', },
       where: {
@@ -66,7 +70,11 @@ export const transactionRouter = createTRPCRouter({
                 color: true, icon: true, id: true, name: true,
               },
             },
-            wallet: { select: { id: true, name: true, type: true, }, },
+            wallet: {
+              select: {
+                currency: true, id: true, name: true, type: true,
+              },
+            },
           },
           orderBy: { date: 'desc', },
           skip,
