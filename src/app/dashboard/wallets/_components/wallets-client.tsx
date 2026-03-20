@@ -40,6 +40,7 @@ import {
 import { CardContent, CardHeader, CardTitle, Card, } from '~/components/ui/card'
 import { Button, } from '~/components/ui/button'
 import { Input, } from '~/components/ui/input'
+import { CURRENCIES, } from '~/lib/currencies'
 import { api, } from '~/trpc/react'
 
 // ── Constants ────────────────────────────────────────────────────────
@@ -71,6 +72,7 @@ const walletSchema = z.object({
   name: z.string().min(1, 'Name is required').max(50),
   type: z.enum(['CHECKING', 'SAVINGS', 'CREDIT', 'CASH', 'INVESTMENT']),
   balance: z.coerce.number(),
+  currency: z.string().length(3),
 })
 
 type WalletFormValues = z.infer<typeof walletSchema>
@@ -132,6 +134,31 @@ const WalletForm = ({
                   {WALLET_TYPES.map((t) => (
                     <SelectItem key={t} value={t}>
                       {WALLET_TYPE_LABELS[t]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name='currency'
+          render={({ field, }) => (
+            <FormItem>
+              <FormLabel>Currency</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder='Select a currency' />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {CURRENCIES.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>
+                      {c.code} — {c.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -217,9 +244,9 @@ export const WalletsClient = () => {
     ])
   }
 
-  const create = api.wallet.create.useMutation({onSuccess: () => { setCreateOpen(false); void invalidate() },})
-  const update = api.wallet.update.useMutation({onSuccess: () => { setEditWallet(null); void invalidate() },})
-  const remove = api.wallet.delete.useMutation({onSuccess: () => { setDeleteWallet(null); void invalidate() },})
+  const create = api.wallet.create.useMutation({ onSuccess: () => { setCreateOpen(false); void invalidate() }, })
+  const update = api.wallet.update.useMutation({ onSuccess: () => { setEditWallet(null); void invalidate() }, })
+  const remove = api.wallet.delete.useMutation({ onSuccess: () => { setDeleteWallet(null); void invalidate() }, })
 
   const formatBalance = (balance: number, currency: string) => new Intl.NumberFormat('en-US', { style: 'currency', currency, }).format(balance)
 
@@ -332,7 +359,9 @@ export const WalletsClient = () => {
           </DialogHeader>
           <WalletForm
             showBalance
-            defaultValues={{ name: '', type: 'CHECKING', balance: 0, }}
+            defaultValues={{
+              name: '', type: 'CHECKING', balance: 0, currency: 'USD',
+            }}
             isPending={create.isPending}
             submitLabel='Create'
             onCancel={() => setCreateOpen(false)}
@@ -354,6 +383,7 @@ export const WalletsClient = () => {
                 name: editWallet.name,
                 type: editWallet.type,
                 balance: editWallet.balance,
+                currency: editWallet.currency,
               }}
               isPending={update.isPending}
               submitLabel='Save changes'

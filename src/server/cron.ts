@@ -40,32 +40,36 @@ const processDueExpenses = async () => {
   console.log(`[cron] Processing ${due.length} due recurring expense(s)…`)
 
   for (const expense of due) {
+    // Collect every missed occurrence in order
+    const dueDates: Date[] = []
+    let next = new Date(expense.nextDueDate)
+    while (next <= now) {
+      dueDates.push(new Date(next))
+      next = advanceDate(next, expense.frequency as Frequency)
+    }
+    // `next` is now the first future due date
+
+    // ── Financial processing (must succeed) ──────────────────────────
     try {
       await db.$transaction(async (tx) => {
-        // Create the transaction
-        await tx.transaction.create({
-          data: {
-            amount: expense.amount,
-            categoryId: expense.categoryId,
-            date: expense.nextDueDate,
-            description: expense.description ?? expense.name,
-            type: 'EXPENSE',
-            userId: expense.userId,
-            walletId: expense.walletId!,
-          },
-        })
+        for (const dueDate of dueDates) {
+          await tx.transaction.create({
+            data: {
+              amount: expense.amount,
+              categoryId: expense.categoryId,
+              date: dueDate,
+              description: expense.description ?? expense.name,
+              type: 'EXPENSE',
+              userId: expense.userId,
+              walletId: expense.walletId!,
+            },
+          })
+        }
 
-        // Debit the wallet
         await tx.wallet.update({
-          data: { balance: { decrement: expense.amount, }, },
+          data: { balance: { decrement: expense.amount * dueDates.length, }, },
           where: { id: expense.walletId!, },
         })
-
-        // Advance nextDueDate until it's in the future
-        let next = advanceDate(expense.nextDueDate, expense.frequency as Frequency)
-        while (next <= now) {
-          next = advanceDate(next, expense.frequency as Frequency)
-        }
 
         await tx.recurringExpense.update({
           data: { nextDueDate: next, },
@@ -73,25 +77,33 @@ const processDueExpenses = async () => {
         })
       })
 
-      console.log(`[cron] Created transaction for "${expense.name}" ($${expense.amount})`)
+      console.log(`[cron] Created ${dueDates.length} transaction(s) for "${expense.name}" ($${(expense.amount * dueDates.length).toFixed(2)} total)`)
+    } catch (err) {
+      console.error(`[cron] Failed to process "${expense.name}":`, err)
+      continue
+    }
 
-      // Send receipt email if user has an email address
-      if (expense.user.email) {
+    // ── Receipt email (best-effort, does not affect processing) ──────
+    if (expense.user.email) {
+      try {
         const walletName = expense.wallet?.name ?? 'Unknown wallet'
+        const totalAmount = expense.amount * dueDates.length
         await sendMail({
           html: recurringReceiptHtml({
-            amount: expense.amount,
-            date: expense.nextDueDate,
-            name: expense.name,
+            amount: totalAmount,
+            date: dueDates[0]!,
+            name: dueDates.length > 1
+              ? `${expense.name} (${dueDates.length} occurrences caught up)`
+              : expense.name,
             walletName,
           }),
-          subject: recurringReceiptSubject(expense.name, expense.amount),
+          subject: recurringReceiptSubject(expense.name, totalAmount),
           to: expense.user.email,
         })
         console.log(`[cron] Receipt email sent to ${expense.user.email}`)
+      } catch (err) {
+        console.error(`[cron] Receipt email failed for "${expense.name}" (transactions still processed):`, err)
       }
-    } catch (err) {
-      console.error(`[cron] Failed to process "${expense.name}":`, err)
     }
   }
 }

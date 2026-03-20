@@ -51,6 +51,7 @@ export const walletRouter = createTRPCRouter({
       id: z.string(),
       name: z.string().min(1).max(50),
       type: walletTypeSchema,
+      currency: z.string().length(3).default('USD'),
     }))
     .mutation(async ({ ctx, input, }) => {
       const { id, ...data } = input

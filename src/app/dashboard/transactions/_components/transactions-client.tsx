@@ -1,7 +1,7 @@
 'use client'
 
 import { keepPreviousData, } from '@tanstack/react-query'
-import { useState, useEffect, } from 'react'
+import { useEffect, useState, } from 'react'
 
 import {
   AlertDialogDescription,
@@ -27,6 +27,7 @@ import {
   Dialog,
 } from '~/components/ui/dialog'
 import { TabsTrigger, TabsList, Tabs, } from '~/components/ui/tabs'
+import { formatCurrency, } from '~/lib/currencies'
 import { Button, } from '~/components/ui/button'
 import { Input, } from '~/components/ui/input'
 import { api, } from '~/trpc/react'
@@ -34,7 +35,7 @@ import { api, } from '~/trpc/react'
 import type { TransactionFormValues, } from './transaction-form'
 import type { TransactionType, } from '../_lib/constants'
 
-import { AMOUNT_COLORS, AMOUNT_PREFIX, TYPE_LABELS, } from '../_lib/constants'
+import { AMOUNT_COLORS, TYPE_LABELS, } from '../_lib/constants'
 import { TransactionForm, } from './transaction-form'
 
 // ── Types ──────────────────────────────────────────────────────────────
@@ -48,7 +49,7 @@ type Transaction = {
   description: string | null
   id: string
   type: TransactionType
-  wallet: { id: string; name: string; type: string }
+  wallet: { currency: string; id: string; name: string; type: string }
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────
@@ -249,8 +250,7 @@ export const TransactionsClient = () => {
 
             {/* Amount */}
             <span className={`shrink-0 font-semibold ${AMOUNT_COLORS[tx.type as TransactionType]}`}>
-              {AMOUNT_PREFIX[tx.type as TransactionType]}
-              {tx.amount.toFixed(2)}
+              {tx.type !== 'INCOME' ? '−' : '+'}{formatCurrency(tx.amount, tx.wallet.currency)}
             </span>
 
             {/* Actions */}
