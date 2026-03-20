@@ -228,6 +228,8 @@ export const WalletsClient = () => {
   const [editWallet, setEditWallet] = useState<Wallet | null>(null)
   const [deleteWallet, setDeleteWallet] = useState<Wallet | null>(null)
 
+  const { data: baseCurrency = 'USD', } = api.user.getBaseCurrency.useQuery()
+
   const { data, isLoading, isFetching, } = api.wallet.listPaginated.useQuery(
     { page, pageSize: PAGE_SIZE, },
     { placeholderData: keepPreviousData, }
@@ -360,7 +362,7 @@ export const WalletsClient = () => {
           <WalletForm
             showBalance
             defaultValues={{
-              name: '', type: 'CHECKING', balance: 0, currency: 'USD',
+              name: '', type: 'CHECKING', balance: 0, currency: baseCurrency,
             }}
             isPending={create.isPending}
             submitLabel='Create'
