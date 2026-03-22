@@ -228,7 +228,7 @@ export const TransactionsClient = () => {
         {transactions.map((tx) => (
           <div
             key={tx.id}
-            className='flex items-center gap-4 rounded-lg border bg-white px-4 py-3'
+            className='flex items-center gap-4 rounded-lg border bg-card px-4 py-3'
           >
             {/* Category icon */}
             <div

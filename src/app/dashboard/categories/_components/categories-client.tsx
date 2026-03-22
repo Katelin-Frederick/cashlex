@@ -131,7 +131,7 @@ export const CategoriesClient = () => {
         {categories.map((category) => (
           <div
             key={category.id}
-            className='flex items-center gap-4 rounded-lg border bg-white px-4 py-3'
+            className='flex items-center gap-4 rounded-lg border bg-card px-4 py-3'
           >
             <div
               className='flex size-9 shrink-0 items-center justify-center rounded-full text-base'

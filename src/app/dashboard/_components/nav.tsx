@@ -15,6 +15,7 @@ import { usePathname, } from 'next/navigation'
 import Link from 'next/link'
 
 import { signOutAction, } from '~/server/actions/auth'
+import { ThemeToggle, } from '~/components/theme-toggle'
 
 const NAV_LINKS = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', },
@@ -33,7 +34,7 @@ export const Nav = ({ userLabel, }: Props) => {
   const pathname = usePathname()
 
   return (
-    <aside className='flex h-screen w-56 shrink-0 flex-col border-r bg-white print:hidden'>
+    <aside className='flex h-screen w-56 shrink-0 flex-col border-r bg-card print:hidden'>
       {/* Logo */}
       <div className='flex h-16 items-center border-b px-5'>
         <span className='text-xl font-bold tracking-tight'>Cashlex</span>
@@ -50,8 +51,8 @@ export const Nav = ({ userLabel, }: Props) => {
                 <Link
                   href={href}
                   className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${isActive
-                    ? 'bg-slate-100 text-slate-900'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    ? 'bg-accent text-accent-foreground'
+                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                     }`}
                 >
                   <Icon className='size-4 shrink-0' />
@@ -65,11 +66,12 @@ export const Nav = ({ userLabel, }: Props) => {
 
       {/* User + sign out */}
       <div className='border-t px-3 py-4 space-y-1'>
-        <p className='truncate px-3 text-xs text-slate-500'>{userLabel}</p>
+        <p className='truncate px-3 text-xs text-muted-foreground'>{userLabel}</p>
+        <ThemeToggle />
         <form action={signOutAction}>
           <button
             type='submit'
-            className='flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900'
+            className='flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground'
           >
             <LogOut className='size-4 shrink-0' />
             Sign out
