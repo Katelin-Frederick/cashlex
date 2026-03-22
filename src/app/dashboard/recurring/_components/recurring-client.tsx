@@ -86,7 +86,7 @@ const RecurringCard = ({ expense, onDelete, onEdit, onToggle, }: CardProps) => {
               <p className='text-muted-foreground truncate text-xs'>{expense.wallet.name}</p>
             </div>
           </div>
-          <span className='shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600'>
+          <span className='shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground'>
             {FREQUENCY_LABELS[expense.frequency]}
           </span>
         </div>
@@ -109,11 +109,11 @@ const RecurringCard = ({ expense, onDelete, onEdit, onToggle, }: CardProps) => {
             </p>
           </div>
           <button
-            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${expense.isActive ? 'bg-emerald-500' : 'bg-slate-300'}`}
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${expense.isActive ? 'bg-emerald-500' : 'bg-muted-foreground/30'}`}
             onClick={() => onToggle(expense)}
           >
             <span
-              className={`inline-block size-4 rounded-full bg-white shadow transition-transform ${expense.isActive ? 'translate-x-4' : 'translate-x-0.5'}`}
+              className={`inline-block size-4 rounded-full bg-background shadow transition-transform ${expense.isActive ? 'translate-x-4' : 'translate-x-0.5'}`}
             />
           </button>
         </div>

@@ -84,7 +84,7 @@ const BudgetCard = ({ budget, onDelete, onEdit, }: BudgetCardProps) => {
               <p className='text-muted-foreground truncate text-xs'>{budget.category.name}</p>
             </div>
           </div>
-          <span className='shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600'>
+          <span className='shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground'>
             {PERIOD_LABELS[budget.period]}
           </span>
         </div>
@@ -92,7 +92,7 @@ const BudgetCard = ({ budget, onDelete, onEdit, }: BudgetCardProps) => {
 
       <CardContent className='space-y-3'>
         {/* Progress bar */}
-        <div className='h-2 w-full overflow-hidden rounded-full bg-slate-200'>
+        <div className='h-2 w-full overflow-hidden rounded-full bg-muted'>
           <div
             className={`h-full rounded-full transition-all ${isOverBudget ? 'bg-red-500' : 'bg-emerald-500'}`}
             style={{ width: `${Math.min(percent, 100)}%`, }}

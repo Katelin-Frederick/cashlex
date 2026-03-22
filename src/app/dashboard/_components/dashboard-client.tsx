@@ -71,7 +71,7 @@ export const DashboardClient = ({ userName, }: Props) => {
             value={baseCurrency}
             disabled={updateBaseCurrency.isPending}
             onChange={(e) => updateBaseCurrency.mutate({ currency: e.target.value, })}
-            className='rounded-md border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-300 disabled:opacity-50'
+            className='rounded-md border bg-background px-2 py-1 text-sm text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50'
           >
             {CURRENCIES.map((c) => (
               <option key={c.code} value={c.code}>
@@ -88,10 +88,10 @@ export const DashboardClient = ({ userName, }: Props) => {
           {Array.from({ length: 5, }).map((_, i) => (
             <Card key={i}>
               <CardHeader className='pb-1'>
-                <div className='h-4 w-24 animate-pulse rounded bg-slate-200' />
+                <div className='h-4 w-24 animate-pulse rounded bg-muted' />
               </CardHeader>
               <CardContent>
-                <div className='h-8 w-32 animate-pulse rounded bg-slate-200' />
+                <div className='h-8 w-32 animate-pulse rounded bg-muted' />
               </CardContent>
             </Card>
           ))}
@@ -209,7 +209,7 @@ export const DashboardClient = ({ userName, }: Props) => {
                         {formatCurrency(budget.spent, baseCurrency)} / {formatCurrency(budget.amount, baseCurrency)}
                       </span>
                     </div>
-                    <div className='h-1.5 w-full overflow-hidden rounded-full bg-slate-200'>
+                    <div className='h-1.5 w-full overflow-hidden rounded-full bg-muted'>
                       <div
                         className={`h-full rounded-full ${isOver ? 'bg-red-500' : 'bg-emerald-500'}`}
                         style={{ width: `${Math.min(percent, 100)}%`, }}

@@ -132,8 +132,8 @@ export const ReportsClient = () => {
       {/* Header */}
       <div className='flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between'>
         <div>
-          <h1 className='text-2xl font-semibold text-slate-900'>Reports</h1>
-          <p className='text-sm text-slate-500'>
+          <h1 className='text-2xl font-semibold'>Reports</h1>
+          <p className='text-sm text-muted-foreground'>
             {formatDate(startDate)} – {formatDate(endDate)}
           </p>
         </div>
@@ -147,8 +147,8 @@ export const ReportsClient = () => {
                 onClick={() => setPreset(p.value)}
                 className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                   preset === p.value
-                    ? 'bg-slate-900 text-white'
-                    : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50'
+                    ? 'bg-foreground text-background'
+                    : 'bg-background text-muted-foreground ring-1 ring-border hover:bg-accent'
                 }`}
               >
                 {p.label}
@@ -161,14 +161,14 @@ export const ReportsClient = () => {
             <button
               onClick={handleExportCsv}
               disabled={exporting}
-              className='flex items-center gap-2 rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-slate-50 disabled:opacity-50'
+              className='flex items-center gap-2 rounded-lg bg-background px-3 py-1.5 text-sm font-medium text-muted-foreground ring-1 ring-border transition-colors hover:bg-accent disabled:opacity-50'
             >
               <Download className='size-3.5' />
               {exporting ? 'Exporting…' : 'Export CSV'}
             </button>
             <button
               onClick={() => window.print()}
-              className='flex items-center gap-2 rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-slate-50'
+              className='flex items-center gap-2 rounded-lg bg-background px-3 py-1.5 text-sm font-medium text-muted-foreground ring-1 ring-border transition-colors hover:bg-accent'
             >
               <Printer className='size-3.5' />
               Print / PDF
@@ -201,27 +201,27 @@ export const ReportsClient = () => {
           label='Transactions'
           loading={summaryLoading}
           value={String(summary?.txCount ?? 0)}
-          valueClass='text-slate-900'
+          valueClass='text-foreground'
         />
       </div>
 
       {/* Charts row */}
       <div className='grid gap-4 lg:grid-cols-2'>
-        <div className='rounded-xl border bg-white p-5'>
-          <h2 className='mb-4 text-sm font-semibold text-slate-700'>Spending by Category</h2>
+        <div className='rounded-xl border bg-card p-5'>
+          <h2 className='mb-4 text-sm font-semibold'>Spending by Category</h2>
           <div className='h-64'>
             <SpendingDonut items={spending} />
           </div>
         </div>
 
-        <div className='rounded-xl border bg-white p-5'>
-          <h2 className='mb-4 text-sm font-semibold text-slate-700'>Income vs Expenses</h2>
+        <div className='rounded-xl border bg-card p-5'>
+          <h2 className='mb-4 text-sm font-semibold'>Income vs Expenses</h2>
           <div className='h-64'>
             {trend.length > 0 ? (
               <MonthlyBar months={trend} />
             ) : (
               <div className='flex h-full items-center justify-center'>
-                <p className='text-sm text-slate-400'>No data for this period</p>
+                <p className='text-sm text-muted-foreground'>No data for this period</p>
               </div>
             )}
           </div>
@@ -231,12 +231,12 @@ export const ReportsClient = () => {
       {/* Bottom row */}
       <div className='grid gap-4 lg:grid-cols-2'>
         {/* Top expenses */}
-        <div className='rounded-xl border bg-white p-5'>
-          <h2 className='mb-4 text-sm font-semibold text-slate-700'>Top Expenses</h2>
+        <div className='rounded-xl border bg-card p-5'>
+          <h2 className='mb-4 text-sm font-semibold'>Top Expenses</h2>
           {topExpenses.length === 0 ? (
-            <p className='py-6 text-center text-sm text-slate-400'>No expenses in this period</p>
+            <p className='py-6 text-center text-sm text-muted-foreground'>No expenses in this period</p>
           ) : (
-            <ul className='divide-y divide-slate-100'>
+            <ul className='divide-y divide-border'>
               {topExpenses.map((tx) => (
                 <li key={tx.id} className='flex items-center justify-between py-2.5'>
                   <div className='flex items-center gap-3'>
@@ -248,15 +248,15 @@ export const ReportsClient = () => {
                         {tx.category.icon ?? '💸'}
                       </span>
                     ) : (
-                      <span className='flex size-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm'>
+                      <span className='flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-sm'>
                         💸
                       </span>
                     )}
                     <div>
-                      <p className='text-sm font-medium text-slate-800'>
+                      <p className='text-sm font-medium'>
                         {tx.description ?? tx.category?.name ?? 'Expense'}
                       </p>
-                      <p className='text-xs text-slate-400'>
+                      <p className='text-xs text-muted-foreground'>
                         {tx.wallet.name} · {new Date(tx.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
                       </p>
                     </div>
@@ -271,10 +271,10 @@ export const ReportsClient = () => {
         </div>
 
         {/* Budget performance */}
-        <div className='rounded-xl border bg-white p-5'>
-          <h2 className='mb-4 text-sm font-semibold text-slate-700'>Budget Performance</h2>
+        <div className='rounded-xl border bg-card p-5'>
+          <h2 className='mb-4 text-sm font-semibold'>Budget Performance</h2>
           {budgets.length === 0 ? (
-            <p className='py-6 text-center text-sm text-slate-400'>No budgets overlap this period</p>
+            <p className='py-6 text-center text-sm text-muted-foreground'>No budgets overlap this period</p>
           ) : (
             <ul className='space-y-4'>
               {budgets.map((b) => {
@@ -290,19 +290,19 @@ export const ReportsClient = () => {
                         >
                           {b.category.icon ?? '📦'}
                         </span>
-                        <span className='text-sm font-medium text-slate-800'>{b.name}</span>
+                        <span className='text-sm font-medium'>{b.name}</span>
                       </div>
-                      <span className={`text-xs font-semibold ${over ? 'text-red-500' : 'text-slate-500'}`}>
+                      <span className={`text-xs font-semibold ${over ? 'text-red-500' : 'text-muted-foreground'}`}>
                         {formatCurrency(b.spent)} / {formatCurrency(b.amount)}
                       </span>
                     </div>
-                    <div className='h-2 overflow-hidden rounded-full bg-slate-100'>
+                    <div className='h-2 overflow-hidden rounded-full bg-muted'>
                       <div
                         className={`h-full rounded-full transition-all ${over ? 'bg-red-400' : 'bg-emerald-400'}`}
                         style={{ width: `${pct}%` }}
                       />
                     </div>
-                    <p className='mt-0.5 text-right text-xs text-slate-400'>{pct.toFixed(0)}% used</p>
+                    <p className='mt-0.5 text-right text-xs text-muted-foreground'>{pct.toFixed(0)}% used</p>
                   </li>
                 )
               })}
@@ -324,10 +324,10 @@ type SummaryCardProps = {
 }
 
 const SummaryCard = ({ label, loading, value, valueClass }: SummaryCardProps) => (
-  <div className='rounded-xl border bg-white p-4'>
-    <p className='text-xs text-slate-500'>{label}</p>
+  <div className='rounded-xl border bg-card p-4'>
+    <p className='text-xs text-muted-foreground'>{label}</p>
     {loading ? (
-      <div className='mt-2 h-6 w-24 animate-pulse rounded bg-slate-100' />
+      <div className='mt-2 h-6 w-24 animate-pulse rounded bg-muted' />
     ) : (
       <p className={`mt-1 text-xl font-semibold ${valueClass}`}>{value}</p>
     )}
