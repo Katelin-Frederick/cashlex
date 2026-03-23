@@ -5,6 +5,7 @@ import {
   ArrowLeftRight,
   RefreshCcw,
   BarChart2,
+  Lightbulb,
   PiggyBank,
   Settings,
   LogOut,
@@ -25,6 +26,7 @@ const NAV_LINKS = [
   { href: '/dashboard/budgets', icon: PiggyBank, label: 'Budgets', },
   { href: '/dashboard/recurring', icon: RefreshCcw, label: 'Recurring', },
   { href: '/dashboard/reports', icon: BarChart2, label: 'Reports', },
+  { href: '/dashboard/insights', icon: Lightbulb, label: 'Insights', },
   { href: '/dashboard/settings', icon: Settings, label: 'Settings', }
 ]
 
