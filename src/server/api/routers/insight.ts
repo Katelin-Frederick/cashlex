@@ -152,6 +152,98 @@ export const insightRouter = createTRPCRouter({
     }))
   }),
 
+  // Income sources: breakdown by category and by wallet, this month vs last month
+  incomeSources: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.session.user.id
+    const now = new Date()
+
+    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    const thisMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999)
+
+    const [thisTxs, lastTxs] = await Promise.all([
+      ctx.db.transaction.findMany({
+        include: {
+          category: { select: { color: true, icon: true, name: true } },
+          wallet: { select: { name: true } },
+        },
+        where: { date: { gte: thisMonthStart, lte: thisMonthEnd }, type: 'INCOME', userId },
+      }),
+      ctx.db.transaction.findMany({
+        include: { category: { select: { color: true, icon: true, name: true } } },
+        where: { date: { gte: lastMonthStart, lte: lastMonthEnd }, type: 'INCOME', userId },
+      }),
+    ])
+
+    // ── By category ───────────────────────────────────────────────────────────
+    type CatEntry = { amount: number; color: string | null; icon: string | null; name: string }
+    const thisCatMap = new Map<string, CatEntry>()
+    let uncategorizedThis = 0
+
+    for (const tx of thisTxs) {
+      if (!tx.categoryId || !tx.category) { uncategorizedThis += tx.amount; continue }
+      const e = thisCatMap.get(tx.categoryId)
+      if (e) e.amount += tx.amount
+      else thisCatMap.set(tx.categoryId, { amount: tx.amount, color: tx.category.color, icon: tx.category.icon, name: tx.category.name })
+    }
+
+    const lastCatMap = new Map<string, number>()
+    let uncategorizedLast = 0
+    for (const tx of lastTxs) {
+      if (!tx.categoryId) { uncategorizedLast += tx.amount; continue }
+      lastCatMap.set(tx.categoryId, (lastCatMap.get(tx.categoryId) ?? 0) + tx.amount)
+    }
+
+    const allCatIds = new Set([...thisCatMap.keys(), ...lastCatMap.keys()])
+    const missingIds = [...allCatIds].filter((id) => !thisCatMap.has(id))
+    const missingCats = missingIds.length > 0
+      ? await ctx.db.category.findMany({
+          select: { color: true, icon: true, id: true, name: true },
+          where: { id: { in: missingIds } },
+        })
+      : []
+    const missingCatMap = new Map(missingCats.map((c) => [c.id, c]))
+
+    const byCategory = [...allCatIds]
+      .map((id) => {
+        const curr = thisCatMap.get(id)
+        const lastAmount = lastCatMap.get(id) ?? 0
+        const thisAmount = curr?.amount ?? 0
+        const cat = curr ?? missingCatMap.get(id)
+        const change = lastAmount === 0
+          ? thisAmount > 0 ? 100 : 0
+          : Math.round(((thisAmount - lastAmount) / lastAmount) * 1000) / 10
+        return { change, color: cat?.color ?? '#94a3b8', icon: cat?.icon ?? null, lastAmount, name: cat?.name ?? 'Unknown', thisAmount }
+      })
+      .sort((a, b) => b.thisAmount - a.thisAmount)
+
+    if (uncategorizedThis > 0 || uncategorizedLast > 0) {
+      const change = uncategorizedLast === 0
+        ? uncategorizedThis > 0 ? 100 : 0
+        : Math.round(((uncategorizedThis - uncategorizedLast) / uncategorizedLast) * 1000) / 10
+      byCategory.push({ change, color: '#94a3b8', icon: '💰', lastAmount: uncategorizedLast, name: 'Uncategorized', thisAmount: uncategorizedThis })
+    }
+
+    // ── By wallet ─────────────────────────────────────────────────────────────
+    const walletMap = new Map<string, { name: string; amount: number }>()
+    for (const tx of thisTxs) {
+      const e = walletMap.get(tx.walletId)
+      if (e) e.amount += tx.amount
+      else walletMap.set(tx.walletId, { amount: tx.amount, name: tx.wallet.name })
+    }
+    const byWallet = [...walletMap.values()].sort((a, b) => b.amount - a.amount)
+
+    // ── Totals ────────────────────────────────────────────────────────────────
+    const totalThisMonth = thisTxs.reduce((s, t) => s + t.amount, 0)
+    const totalLastMonth = lastTxs.reduce((s, t) => s + t.amount, 0)
+    const totalChange = totalLastMonth === 0
+      ? totalThisMonth > 0 ? 100 : 0
+      : Math.round(((totalThisMonth - totalLastMonth) / totalLastMonth) * 1000) / 10
+
+    return { byCategory, byWallet, totalChange, totalLastMonth, totalThisMonth }
+  }),
+
   // Savings rate (income - expenses) / income % for each of the last 6 months
   savingsRate: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session.user.id

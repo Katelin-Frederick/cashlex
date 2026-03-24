@@ -24,6 +24,7 @@ export const InsightsClient = () => {
   const { data: trends = [], isLoading: trendsLoading } = api.insight.categoryTrends.useQuery()
   const { data: dowPattern = [], isLoading: dowLoading } = api.insight.dayOfWeekPattern.useQuery()
   const { data: savingsMonths = [], isLoading: savingsLoading } = api.insight.savingsRate.useQuery()
+  const { data: income, isLoading: incomeLoading } = api.insight.incomeSources.useQuery()
 
   // Biggest mover: largest absolute change with meaningful spend
   const biggestMover = trends
@@ -231,7 +232,137 @@ export const InsightsClient = () => {
         </Card>
       </div>
 
-      {/* ── Row 3: Day of Week + Savings Rate trend ── */}
+      {/* ── Row 3: Income Sources Breakdown ── */}
+      <div className='grid gap-4 lg:grid-cols-3'>
+        {/* Total income summary */}
+        <Card>
+          <CardHeader>
+            <CardTitle className='text-sm font-semibold'>Income This Month</CardTitle>
+            <p className='text-xs text-muted-foreground'>vs last month</p>
+          </CardHeader>
+          <CardContent>
+            {incomeLoading ? (
+              <div className='space-y-2'>
+                <div className='h-7 w-28 animate-pulse rounded bg-muted' />
+                <div className='h-4 w-36 animate-pulse rounded bg-muted' />
+              </div>
+            ) : (
+              <>
+                <p className='text-2xl font-bold text-emerald-500'>{fmt(income?.totalThisMonth ?? 0)}</p>
+                <p className='mt-1 text-xs text-muted-foreground'>
+                  {fmt(income?.totalLastMonth ?? 0)} last month
+                </p>
+                {(income?.totalLastMonth ?? 0) > 0 && (
+                  <p className={`mt-2 text-xs font-medium ${(income?.totalChange ?? 0) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                    {pctIcon(-(income?.totalChange ?? 0))}{' '}
+                    {Math.abs(income?.totalChange ?? 0)}%
+                    {(income?.totalChange ?? 0) >= 0 ? ' more' : ' less'} than last month
+                  </p>
+                )}
+                {income?.totalThisMonth === 0 && (
+                  <p className='mt-2 text-xs text-muted-foreground'>No income recorded this month</p>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Income by category */}
+        <Card>
+          <CardHeader>
+            <CardTitle className='text-sm font-semibold'>By Source</CardTitle>
+            <p className='text-xs text-muted-foreground'>Income categories this month</p>
+          </CardHeader>
+          <CardContent>
+            {incomeLoading ? (
+              <div className='space-y-3'>
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className='flex items-center gap-3'>
+                    <div className='size-7 animate-pulse rounded-full bg-muted' />
+                    <div className='h-4 flex-1 animate-pulse rounded bg-muted' />
+                    <div className='h-4 w-14 animate-pulse rounded bg-muted' />
+                  </div>
+                ))}
+              </div>
+            ) : (income?.byCategory ?? []).length === 0 ? (
+              <p className='py-4 text-center text-sm text-muted-foreground'>No income this month</p>
+            ) : (
+              <ul className='divide-y divide-border'>
+                {(income?.byCategory ?? []).map((src) => (
+                  <li key={src.name} className='flex items-center justify-between py-2'>
+                    <div className='flex items-center gap-2'>
+                      <span
+                        className='flex size-7 shrink-0 items-center justify-center rounded-full text-sm'
+                        style={{ background: src.color }}
+                      >
+                        {src.icon ?? '💰'}
+                      </span>
+                      <p className='text-sm font-medium'>{src.name}</p>
+                    </div>
+                    <div className='text-right'>
+                      <p className='text-sm font-semibold'>{fmt(src.thisAmount)}</p>
+                      {src.lastAmount > 0 && (
+                        <p className={`text-xs ${pctColor(-src.change)}`}>
+                          {pctIcon(-src.change)} {Math.abs(src.change)}%
+                        </p>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Income by wallet */}
+        <Card>
+          <CardHeader>
+            <CardTitle className='text-sm font-semibold'>By Wallet</CardTitle>
+            <p className='text-xs text-muted-foreground'>Which accounts received income</p>
+          </CardHeader>
+          <CardContent>
+            {incomeLoading ? (
+              <div className='space-y-3'>
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className='flex items-center justify-between gap-3'>
+                    <div className='h-4 w-24 animate-pulse rounded bg-muted' />
+                    <div className='h-4 w-16 animate-pulse rounded bg-muted' />
+                  </div>
+                ))}
+              </div>
+            ) : (income?.byWallet ?? []).length === 0 ? (
+              <p className='py-4 text-center text-sm text-muted-foreground'>No income this month</p>
+            ) : (
+              <>
+                <ul className='divide-y divide-border'>
+                  {(income?.byWallet ?? []).map((w) => {
+                    const pct = (income?.totalThisMonth ?? 0) > 0
+                      ? (w.amount / income!.totalThisMonth) * 100
+                      : 0
+                    return (
+                      <li key={w.name} className='py-2.5'>
+                        <div className='mb-1 flex items-center justify-between'>
+                          <p className='text-sm font-medium'>{w.name}</p>
+                          <p className='text-sm font-semibold text-emerald-500'>{fmt(w.amount)}</p>
+                        </div>
+                        <div className='h-1.5 w-full overflow-hidden rounded-full bg-muted'>
+                          <div
+                            className='h-full rounded-full bg-emerald-500 transition-all'
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <p className='mt-0.5 text-right text-xs text-muted-foreground'>{pct.toFixed(0)}%</p>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── Row 4: Day of Week + Savings Rate trend ── */}
       <div className='grid gap-4 lg:grid-cols-2'>
         <Card>
           <CardHeader>

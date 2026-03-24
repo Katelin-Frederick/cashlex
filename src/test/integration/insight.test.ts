@@ -192,6 +192,113 @@ describe('insight.dayOfWeekPattern', () => {
   })
 })
 
+// ── incomeSources ─────────────────────────────────────────────────────────────
+
+describe('insight.incomeSources', () => {
+  it('returns totals for this month and last month', async () => {
+    const user = await createUser()
+    const wallet = await createWallet(user.id)
+    const caller = createCaller(createTestContext(user.id))
+
+    await testDb.transaction.createMany({
+      data: [
+        { amount: 3000, type: 'INCOME', date: thisMonthDate(5), userId: user.id, walletId: wallet.id },
+        { amount: 2500, type: 'INCOME', date: lastMonthDate(5), userId: user.id, walletId: wallet.id },
+      ],
+    })
+
+    const result = await caller.insight.incomeSources()
+
+    expect(result.totalThisMonth).toBeCloseTo(3000)
+    expect(result.totalLastMonth).toBeCloseTo(2500)
+    expect(result.totalChange).toBeCloseTo(20)
+  })
+
+  it('groups income by category with MoM change', async () => {
+    const user = await createUser()
+    const wallet = await createWallet(user.id)
+    const salary = await createCategory(user.id, { name: 'Salary', type: 'INCOME' })
+    const freelance = await createCategory(user.id, { name: 'Freelance', type: 'INCOME' })
+    const caller = createCaller(createTestContext(user.id))
+
+    await testDb.transaction.createMany({
+      data: [
+        { amount: 5000, type: 'INCOME', date: thisMonthDate(1), userId: user.id, walletId: wallet.id, categoryId: salary.id },
+        { amount: 800, type: 'INCOME', date: thisMonthDate(3), userId: user.id, walletId: wallet.id, categoryId: freelance.id },
+        { amount: 5000, type: 'INCOME', date: lastMonthDate(1), userId: user.id, walletId: wallet.id, categoryId: salary.id },
+        { amount: 400, type: 'INCOME', date: lastMonthDate(3), userId: user.id, walletId: wallet.id, categoryId: freelance.id },
+      ],
+    })
+
+    const result = await caller.insight.incomeSources()
+
+    const salaryEntry = result.byCategory.find((c) => c.name === 'Salary')
+    const freelanceEntry = result.byCategory.find((c) => c.name === 'Freelance')
+
+    expect(salaryEntry?.thisAmount).toBeCloseTo(5000)
+    expect(salaryEntry?.change).toBeCloseTo(0)
+    expect(freelanceEntry?.thisAmount).toBeCloseTo(800)
+    expect(freelanceEntry?.change).toBeCloseTo(100)
+  })
+
+  it('puts uncategorized income in its own bucket', async () => {
+    const user = await createUser()
+    const wallet = await createWallet(user.id)
+    const caller = createCaller(createTestContext(user.id))
+
+    // No category assigned
+    await testDb.transaction.create({
+      data: { amount: 1200, type: 'INCOME', date: thisMonthDate(5), userId: user.id, walletId: wallet.id },
+    })
+
+    const result = await caller.insight.incomeSources()
+
+    const uncategorized = result.byCategory.find((c) => c.name === 'Uncategorized')
+    expect(uncategorized?.thisAmount).toBeCloseTo(1200)
+  })
+
+  it('groups income by wallet with correct amounts', async () => {
+    const user = await createUser()
+    const checking = await createWallet(user.id, { name: 'Checking' })
+    const savings = await createWallet(user.id, { name: 'Savings', balance: 0 })
+    const caller = createCaller(createTestContext(user.id))
+
+    await testDb.transaction.createMany({
+      data: [
+        { amount: 4000, type: 'INCOME', date: thisMonthDate(5), userId: user.id, walletId: checking.id },
+        { amount: 1000, type: 'INCOME', date: thisMonthDate(6), userId: user.id, walletId: savings.id },
+      ],
+    })
+
+    const result = await caller.insight.incomeSources()
+
+    const checkingEntry = result.byWallet.find((w) => w.name === 'Checking')
+    const savingsEntry = result.byWallet.find((w) => w.name === 'Savings')
+
+    expect(checkingEntry?.amount).toBeCloseTo(4000)
+    expect(savingsEntry?.amount).toBeCloseTo(1000)
+    // Checking should come first (sorted by amount desc)
+    expect(result.byWallet[0]?.name).toBe('Checking')
+  })
+
+  it('does not count EXPENSE transactions as income', async () => {
+    const user = await createUser()
+    const wallet = await createWallet(user.id)
+    const caller = createCaller(createTestContext(user.id))
+
+    await testDb.transaction.createMany({
+      data: [
+        { amount: 2000, type: 'INCOME', date: thisMonthDate(5), userId: user.id, walletId: wallet.id },
+        { amount: 500, type: 'EXPENSE', date: thisMonthDate(6), userId: user.id, walletId: wallet.id },
+      ],
+    })
+
+    const result = await caller.insight.incomeSources()
+
+    expect(result.totalThisMonth).toBeCloseTo(2000)
+  })
+})
+
 // ── savingsRate ───────────────────────────────────────────────────────────────
 
 describe('insight.savingsRate', () => {
