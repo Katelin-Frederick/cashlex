@@ -7,6 +7,7 @@ import {
   BarChart2,
   Lightbulb,
   PiggyBank,
+  Target,
   Settings,
   LogOut,
   Wallet,
@@ -27,6 +28,7 @@ const NAV_LINKS = [
   { href: '/dashboard/recurring', icon: RefreshCcw, label: 'Recurring', },
   { href: '/dashboard/reports', icon: BarChart2, label: 'Reports', },
   { href: '/dashboard/insights', icon: Lightbulb, label: 'Insights', },
+  { href: '/dashboard/goals', icon: Target, label: 'Goals', },
   { href: '/dashboard/settings', icon: Settings, label: 'Settings', }
 ]
 
