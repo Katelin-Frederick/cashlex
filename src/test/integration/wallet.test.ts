@@ -114,3 +114,82 @@ describe('wallet.delete', () => {
     await expect(caller.wallet.delete({ id: wallet.id })).rejects.toThrow()
   })
 })
+
+// ── CREDIT wallet ↔ debt auto-management ─────────────────────────────────────
+
+describe('CREDIT wallet auto-creates debt', () => {
+  it('creates a linked CREDIT_CARD debt when a CREDIT wallet is created', async () => {
+    const user = await createUser()
+    const caller = createCaller(createTestContext(user.id))
+
+    const wallet = await caller.wallet.create({ name: 'Chase Visa', type: 'CREDIT', balance: 3500, currency: 'USD' })
+
+    const debt = await testDb.debt.findFirst({ where: { walletId: wallet.id } })
+    expect(debt).not.toBeNull()
+    expect(debt!.name).toBe('Chase Visa')
+    expect(debt!.type).toBe('CREDIT_CARD')
+    expect(debt!.currentBalance).toBeCloseTo(3500)
+    expect(debt!.originalAmount).toBeCloseTo(3500)
+  })
+
+  it('does not create a debt for non-CREDIT wallets', async () => {
+    const user = await createUser()
+    const caller = createCaller(createTestContext(user.id))
+
+    const wallet = await caller.wallet.create({ name: 'Checking', type: 'CHECKING', balance: 1000, currency: 'USD' })
+
+    const debt = await testDb.debt.findFirst({ where: { walletId: wallet.id } })
+    expect(debt).toBeNull()
+  })
+
+  it('syncs debt name when CREDIT wallet is renamed', async () => {
+    const user = await createUser()
+    const caller = createCaller(createTestContext(user.id))
+
+    const wallet = await caller.wallet.create({ name: 'Old Name', type: 'CREDIT', balance: 2000, currency: 'USD' })
+    await caller.wallet.update({ id: wallet.id, name: 'New Name', type: 'CREDIT', currency: 'USD' })
+
+    const debt = await testDb.debt.findFirst({ where: { walletId: wallet.id } })
+    expect(debt!.name).toBe('New Name')
+  })
+
+  it('deletes linked debt when CREDIT wallet is deleted', async () => {
+    const user = await createUser()
+    const caller = createCaller(createTestContext(user.id))
+
+    const wallet = await caller.wallet.create({ name: 'Visa', type: 'CREDIT', balance: 1000, currency: 'USD' })
+    const debt = await testDb.debt.findFirst({ where: { walletId: wallet.id } })
+    expect(debt).not.toBeNull()
+
+    await caller.wallet.delete({ id: wallet.id })
+
+    const deletedDebt = await testDb.debt.findUnique({ where: { id: debt!.id } })
+    expect(deletedDebt).toBeNull()
+  })
+
+  it('deletes linked debt when wallet type changes away from CREDIT', async () => {
+    const user = await createUser()
+    const caller = createCaller(createTestContext(user.id))
+
+    const wallet = await caller.wallet.create({ name: 'Card', type: 'CREDIT', balance: 500, currency: 'USD' })
+    const debt = await testDb.debt.findFirst({ where: { walletId: wallet.id } })
+    expect(debt).not.toBeNull()
+
+    await caller.wallet.update({ id: wallet.id, name: 'Card', type: 'CHECKING', currency: 'USD' })
+
+    const deletedDebt = await testDb.debt.findUnique({ where: { id: debt!.id } })
+    expect(deletedDebt).toBeNull()
+  })
+
+  it('creates a linked debt when wallet type changes to CREDIT', async () => {
+    const user = await createUser()
+    const caller = createCaller(createTestContext(user.id))
+
+    const wallet = await createWallet(user.id, { name: 'My Card', type: 'CHECKING', balance: 0 })
+    await caller.wallet.update({ id: wallet.id, name: 'My Card', type: 'CREDIT', currency: 'USD' })
+
+    const debt = await testDb.debt.findFirst({ where: { walletId: wallet.id } })
+    expect(debt).not.toBeNull()
+    expect(debt!.type).toBe('CREDIT_CARD')
+  })
+})

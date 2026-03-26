@@ -83,7 +83,7 @@ const RecurringCard = ({ expense, onDelete, onEdit, onToggle, }: CardProps) => {
             )}
             <div className='overflow-hidden'>
               <CardTitle className='truncate text-base'>{expense.name}</CardTitle>
-              <p className='text-muted-foreground truncate text-xs'>{expense.wallet.name}</p>
+              <p className='text-muted-foreground truncate text-xs'>{expense.wallet?.name ?? 'No wallet'}</p>
             </div>
           </div>
           <span className='shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground'>

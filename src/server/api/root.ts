@@ -1,4 +1,5 @@
 import { recurringExpenseRouter, } from '~/server/api/routers/recurringExpense'
+import { debtRouter, } from '~/server/api/routers/debt'
 import { savingsGoalRouter, } from '~/server/api/routers/savingsGoal'
 import { createCallerFactory, createTRPCRouter, } from '~/server/api/trpc'
 import { transactionRouter, } from '~/server/api/routers/transaction'
@@ -19,6 +20,7 @@ import { userRouter, } from '~/server/api/routers/user'
 export const appRouter = createTRPCRouter({
   auth: authRouter,
   budget: budgetRouter,
+  debt: debtRouter,
   category: categoryRouter,
   dashboard: dashboardRouter,
   insight: insightRouter,

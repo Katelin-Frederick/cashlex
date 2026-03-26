@@ -1,7 +1,7 @@
 'use client'
 
 import { CardContent, CardHeader, CardTitle, Card, } from '~/components/ui/card'
-import { formatCurrency, CURRENCIES, } from '~/lib/currencies'
+import { formatCurrency, } from '~/lib/currencies'
 import { api, } from '~/trpc/react'
 
 import { SpendingDonut, } from './spending-donut'
@@ -31,21 +31,11 @@ const StatCard = ({ label, value, valueClass = '', }: StatCardProps) => (
 type Props = { userName: string }
 
 export const DashboardClient = ({ userName, }: Props) => {
-  const utils = api.useUtils()
-
   const { data: stats, isLoading: statsLoading, } = api.dashboard.stats.useQuery()
   const { data: spending = [], } = api.dashboard.spendingByCategory.useQuery()
   const { data: trend = [], } = api.dashboard.monthlyTrend.useQuery()
   const { data: recent = [], } = api.dashboard.recentTransactions.useQuery()
   const { data: budgets = [], } = api.dashboard.activeBudgets.useQuery()
-
-  const updateBaseCurrency = api.user.updateBaseCurrency.useMutation({
-    onSuccess: () => {
-      void utils.dashboard.stats.invalidate()
-      void utils.dashboard.spendingByCategory.invalidate()
-      void utils.dashboard.monthlyTrend.invalidate()
-    },
-  })
 
   const baseCurrency = stats?.baseCurrency ?? 'USD'
   const fmt = (n: number, opts?: { sign?: boolean }) => {
@@ -64,26 +54,11 @@ export const DashboardClient = ({ userName, }: Props) => {
           <p className='text-muted-foreground mt-1 text-sm'>{currentMonth} overview</p>
         </div>
 
-        {/* Base currency selector */}
-        <div className='flex items-center gap-2'>
-          <span className='text-muted-foreground text-sm'>Base currency:</span>
-          <select
-            value={baseCurrency}
-            disabled={updateBaseCurrency.isPending}
-            onChange={(e) => updateBaseCurrency.mutate({ currency: e.target.value, })}
-            className='rounded-md border bg-background px-2 py-1 text-sm text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50'
-          >
-            {CURRENCIES.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.code} — {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <p className='text-muted-foreground text-sm'>Currency: <span className='font-medium text-foreground'>{baseCurrency}</span></p>
       </div>
 
       {/* Stats row */}
-      {statsLoading ? (
+      {statsLoading && !stats ? (
         <div className='grid grid-cols-2 gap-4 lg:grid-cols-5'>
           {Array.from({ length: 5, }).map((_, i) => (
             <Card key={i}>
