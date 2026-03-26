@@ -8,6 +8,7 @@ import {
   Lightbulb,
   PiggyBank,
   Target,
+  CreditCard,
   Settings,
   LogOut,
   Wallet,
@@ -29,6 +30,7 @@ const NAV_LINKS = [
   { href: '/dashboard/reports', icon: BarChart2, label: 'Reports', },
   { href: '/dashboard/insights', icon: Lightbulb, label: 'Insights', },
   { href: '/dashboard/goals', icon: Target, label: 'Goals', },
+  { href: '/dashboard/debt', icon: CreditCard, label: 'Debt', },
   { href: '/dashboard/settings', icon: Settings, label: 'Settings', }
 ]
 

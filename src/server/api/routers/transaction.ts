@@ -100,9 +100,14 @@ export const transactionRouter = createTRPCRouter({
           walletId: input.walletId,
         },
       })
-      await prisma.wallet.update({
+      const updatedWallet = await prisma.wallet.update({
         data: { balance: { increment: getBalanceDelta(input.type, input.amount), }, },
+        select: { balance: true },
         where: { id: input.walletId, userId: ctx.session.user.id, },
+      })
+      await prisma.debt.updateMany({
+        data: { currentBalance: updatedWallet.balance, isPaidOff: updatedWallet.balance <= 0 },
+        where: { walletId: input.walletId },
       })
       return tx
     })
@@ -130,18 +135,33 @@ export const transactionRouter = createTRPCRouter({
 
       if (old.walletId !== input.walletId) {
         // Reverse old wallet, apply to new wallet separately
-        await prisma.wallet.update({
+        const oldWallet = await prisma.wallet.update({
           data: { balance: { increment: reverseDelta, }, },
+          select: { balance: true },
           where: { id: old.walletId, userId: ctx.session.user.id, },
         })
-        await prisma.wallet.update({
+        await prisma.debt.updateMany({
+          data: { currentBalance: oldWallet.balance, isPaidOff: oldWallet.balance <= 0 },
+          where: { walletId: old.walletId },
+        })
+        const newWallet = await prisma.wallet.update({
           data: { balance: { increment: newDelta, }, },
+          select: { balance: true },
           where: { id: input.walletId, userId: ctx.session.user.id, },
         })
+        await prisma.debt.updateMany({
+          data: { currentBalance: newWallet.balance, isPaidOff: newWallet.balance <= 0 },
+          where: { walletId: input.walletId },
+        })
       } else {
-        await prisma.wallet.update({
+        const updatedWallet = await prisma.wallet.update({
           data: { balance: { increment: reverseDelta + newDelta, }, },
+          select: { balance: true },
           where: { id: input.walletId, userId: ctx.session.user.id, },
+        })
+        await prisma.debt.updateMany({
+          data: { currentBalance: updatedWallet.balance, isPaidOff: updatedWallet.balance <= 0 },
+          where: { walletId: input.walletId },
         })
       }
 
@@ -153,9 +173,14 @@ export const transactionRouter = createTRPCRouter({
     .input(z.object({ id: z.string(), }))
     .mutation(({ ctx, input, }) => ctx.db.$transaction(async (prisma) => {
       const old = await prisma.transaction.findUniqueOrThrow({ where: { id: input.id, userId: ctx.session.user.id, }, })
-      await prisma.wallet.update({
+      const updatedWallet = await prisma.wallet.update({
         data: { balance: { increment: -getBalanceDelta(old.type, old.amount), }, },
+        select: { balance: true },
         where: { id: old.walletId, userId: ctx.session.user.id, },
+      })
+      await prisma.debt.updateMany({
+        data: { currentBalance: updatedWallet.balance, isPaidOff: updatedWallet.balance <= 0 },
+        where: { walletId: old.walletId },
       })
       await prisma.transaction.delete({ where: { id: input.id, }, })
     })

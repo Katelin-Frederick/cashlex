@@ -70,6 +70,7 @@ model User {
     recurringExpenses RecurringExpense[]
     notifications     Notification[]
     savingsGoals      SavingsGoal[]
+    debts             Debt[]
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
@@ -92,10 +93,11 @@ model Wallet {
     balance  Float      @default(0)
     currency String     @default("USD")
 
-    userId       String
-    user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-    transactions Transaction[]
+    userId            String
+    user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+    transactions      Transaction[]
     recurringExpenses RecurringExpense[]
+    linkedDebt        Debt?              @relation("DebtWallet")
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
@@ -133,16 +135,19 @@ model Transaction {
     userId        String
     user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
     walletId      String
-    wallet        Wallet       @relation(fields: [walletId], references: [id])
+    wallet        Wallet       @relation(fields: [walletId], references: [id], onDelete: Cascade)
     categoryId    String?
     category      Category?    @relation(fields: [categoryId], references: [id])
     savingsGoalId String?
     savingsGoal   SavingsGoal? @relation(fields: [savingsGoalId], references: [id], onDelete: SetNull)
+    debtId        String?
+    debt          Debt?        @relation(fields: [debtId], references: [id], onDelete: SetNull)
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
     @@index([savingsGoalId])
+    @@index([debtId])
 }
 
 enum BudgetPeriod {
@@ -191,7 +196,7 @@ model RecurringExpense {
     categoryId String?
     category   Category? @relation(fields: [categoryId], references: [id])
     walletId   String?
-    wallet     Wallet?   @relation(fields: [walletId], references: [id])
+    wallet     Wallet?   @relation(fields: [walletId], references: [id], onDelete: SetNull)
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
@@ -210,6 +215,39 @@ model SavingsGoal {
     userId        String
     user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
     contributions Transaction[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+enum DebtType {
+    CREDIT_CARD
+    STUDENT_LOAN
+    MORTGAGE
+    AUTO_LOAN
+    PERSONAL_LOAN
+    MEDICAL
+    OTHER
+}
+
+model Debt {
+    id             String   @id @default(cuid())
+    name           String
+    type           DebtType @default(OTHER)
+    creditor       String?
+    originalAmount Float
+    currentBalance Float
+    interestRate   Float?
+    minimumPayment Float?
+    dueDay         Int?
+    notes          String?
+    isPaidOff      Boolean  @default(false)
+
+    userId   String
+    user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+    walletId String?       @unique
+    wallet   Wallet?       @relation("DebtWallet", fields: [walletId], references: [id], onDelete: SetNull)
+    payments Transaction[]
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
