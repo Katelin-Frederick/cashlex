@@ -6,6 +6,7 @@ import { api, } from '~/trpc/react'
 
 import { SpendingDonut, } from './spending-donut'
 import { MonthlyBar, } from './monthly-bar'
+import { NetWorthLine, } from './net-worth-line'
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -36,6 +37,7 @@ export const DashboardClient = ({ userName, }: Props) => {
   const { data: trend = [], } = api.dashboard.monthlyTrend.useQuery()
   const { data: recent = [], } = api.dashboard.recentTransactions.useQuery()
   const { data: budgets = [], } = api.dashboard.activeBudgets.useQuery()
+  const { data: netWorthHistory = [], } = api.dashboard.netWorthHistory.useQuery()
 
   const baseCurrency = stats?.baseCurrency ?? 'USD'
   const fmt = (n: number, opts?: { sign?: boolean }) => {
@@ -117,6 +119,17 @@ export const DashboardClient = ({ userName, }: Props) => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Net worth history */}
+      <Card>
+        <CardHeader>
+          <CardTitle className='text-base'>Net Worth History</CardTitle>
+          <p className='text-muted-foreground text-xs'>Last 12 months · {baseCurrency}</p>
+        </CardHeader>
+        <CardContent style={{ minHeight: 220, }}>
+          <NetWorthLine baseCurrency={baseCurrency} months={netWorthHistory} />
+        </CardContent>
+      </Card>
 
       {/* Bottom row */}
       <div className='grid grid-cols-1 gap-6 lg:grid-cols-2'>
