@@ -58,8 +58,9 @@ model User {
     image         String?
     password      String?   // hashed — used by credentials provider
     baseCurrency  String    @default("USD")
-    emailNotificationsReceipt Boolean @default(true)
-    emailNotificationsDigest  Boolean @default(true)
+    emailNotificationsReceipt     Boolean @default(true)
+    emailNotificationsDigest      Boolean @default(true)
+    emailNotificationsBudgetAlert Boolean @default(true)
 
     accounts          Account[]
     sessions          Session[]
@@ -163,6 +164,10 @@ model Budget {
     period    BudgetPeriod
     startDate DateTime
     endDate   DateTime
+
+    alertEnabled   Boolean   @default(true)
+    alertThreshold Float     @default(0.8)
+    alertSentAt    DateTime?
 
     userId     String
     user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)

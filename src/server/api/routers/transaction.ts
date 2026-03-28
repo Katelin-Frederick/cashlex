@@ -1,6 +1,7 @@
 import { z, } from 'zod'
 
 import { protectedProcedure, createTRPCRouter, } from '~/server/api/trpc'
+import { checkBudgetAlerts, } from '~/server/budgetAlerts'
 
 const transactionTypeSchema = z.enum(['INCOME', 'EXPENSE', 'TRANSFER'])
 
@@ -88,74 +89,21 @@ export const transactionRouter = createTRPCRouter({
 
   create: protectedProcedure
     .input(transactionInputSchema)
-    .mutation(({ ctx, input, }) => ctx.db.$transaction(async (prisma) => {
-      const tx = await prisma.transaction.create({
-        data: {
-          amount: input.amount,
-          categoryId: input.categoryId ?? null,
-          date: new Date(input.date),
-          description: input.description ?? null,
-          type: input.type,
-          userId: ctx.session.user.id,
-          walletId: input.walletId,
-        },
-      })
-      const updatedWallet = await prisma.wallet.update({
-        data: { balance: { increment: getBalanceDelta(input.type, input.amount), }, },
-        select: { balance: true },
-        where: { id: input.walletId, userId: ctx.session.user.id, },
-      })
-      await prisma.debt.updateMany({
-        data: { currentBalance: updatedWallet.balance, isPaidOff: updatedWallet.balance <= 0 },
-        where: { walletId: input.walletId },
-      })
-      return tx
-    })
-    ),
-
-  update: protectedProcedure
-    .input(transactionInputSchema.extend({ id: z.string(), }))
-    .mutation(({ ctx, input, }) => ctx.db.$transaction(async (prisma) => {
-      const old = await prisma.transaction.findUniqueOrThrow({ where: { id: input.id, userId: ctx.session.user.id, }, })
-
-      const reverseDelta = -getBalanceDelta(old.type, old.amount)
-      const newDelta = getBalanceDelta(input.type, input.amount)
-
-      const tx = await prisma.transaction.update({
-        data: {
-          amount: input.amount,
-          categoryId: input.categoryId ?? null,
-          date: new Date(input.date),
-          description: input.description ?? null,
-          type: input.type,
-          walletId: input.walletId,
-        },
-        where: { id: input.id, },
-      })
-
-      if (old.walletId !== input.walletId) {
-        // Reverse old wallet, apply to new wallet separately
-        const oldWallet = await prisma.wallet.update({
-          data: { balance: { increment: reverseDelta, }, },
-          select: { balance: true },
-          where: { id: old.walletId, userId: ctx.session.user.id, },
+    .mutation(async ({ ctx, input, }) => {
+      const tx = await ctx.db.$transaction(async (prisma) => {
+        const created = await prisma.transaction.create({
+          data: {
+            amount: input.amount,
+            categoryId: input.categoryId ?? null,
+            date: new Date(input.date),
+            description: input.description ?? null,
+            type: input.type,
+            userId: ctx.session.user.id,
+            walletId: input.walletId,
+          },
         })
-        await prisma.debt.updateMany({
-          data: { currentBalance: oldWallet.balance, isPaidOff: oldWallet.balance <= 0 },
-          where: { walletId: old.walletId },
-        })
-        const newWallet = await prisma.wallet.update({
-          data: { balance: { increment: newDelta, }, },
-          select: { balance: true },
-          where: { id: input.walletId, userId: ctx.session.user.id, },
-        })
-        await prisma.debt.updateMany({
-          data: { currentBalance: newWallet.balance, isPaidOff: newWallet.balance <= 0 },
-          where: { walletId: input.walletId },
-        })
-      } else {
         const updatedWallet = await prisma.wallet.update({
-          data: { balance: { increment: reverseDelta + newDelta, }, },
+          data: { balance: { increment: getBalanceDelta(input.type, input.amount), }, },
           select: { balance: true },
           where: { id: input.walletId, userId: ctx.session.user.id, },
         })
@@ -163,26 +111,99 @@ export const transactionRouter = createTRPCRouter({
           data: { currentBalance: updatedWallet.balance, isPaidOff: updatedWallet.balance <= 0 },
           where: { walletId: input.walletId },
         })
+        return created
+      })
+      if (input.type === 'EXPENSE' && input.categoryId) {
+        checkBudgetAlerts(ctx.session.user.id, input.categoryId)
+          .catch((err) => console.error('[budget] Alert check failed:', err))
       }
-
       return tx
-    })
-    ),
+    }),
+
+  update: protectedProcedure
+    .input(transactionInputSchema.extend({ id: z.string(), }))
+    .mutation(async ({ ctx, input, }) => {
+      const tx = await ctx.db.$transaction(async (prisma) => {
+        const old = await prisma.transaction.findUniqueOrThrow({ where: { id: input.id, userId: ctx.session.user.id, }, })
+
+        const reverseDelta = -getBalanceDelta(old.type, old.amount)
+        const newDelta = getBalanceDelta(input.type, input.amount)
+
+        const updated = await prisma.transaction.update({
+          data: {
+            amount: input.amount,
+            categoryId: input.categoryId ?? null,
+            date: new Date(input.date),
+            description: input.description ?? null,
+            type: input.type,
+            walletId: input.walletId,
+          },
+          where: { id: input.id, },
+        })
+
+        if (old.walletId !== input.walletId) {
+          // Reverse old wallet, apply to new wallet separately
+          const oldWallet = await prisma.wallet.update({
+            data: { balance: { increment: reverseDelta, }, },
+            select: { balance: true },
+            where: { id: old.walletId, userId: ctx.session.user.id, },
+          })
+          await prisma.debt.updateMany({
+            data: { currentBalance: oldWallet.balance, isPaidOff: oldWallet.balance <= 0 },
+            where: { walletId: old.walletId },
+          })
+          const newWallet = await prisma.wallet.update({
+            data: { balance: { increment: newDelta, }, },
+            select: { balance: true },
+            where: { id: input.walletId, userId: ctx.session.user.id, },
+          })
+          await prisma.debt.updateMany({
+            data: { currentBalance: newWallet.balance, isPaidOff: newWallet.balance <= 0 },
+            where: { walletId: input.walletId },
+          })
+        } else {
+          const updatedWallet = await prisma.wallet.update({
+            data: { balance: { increment: reverseDelta + newDelta, }, },
+            select: { balance: true },
+            where: { id: input.walletId, userId: ctx.session.user.id, },
+          })
+          await prisma.debt.updateMany({
+            data: { currentBalance: updatedWallet.balance, isPaidOff: updatedWallet.balance <= 0 },
+            where: { walletId: input.walletId },
+          })
+        }
+
+        return { updated, oldCategoryId: old.categoryId }
+      })
+
+      const categoryId = input.categoryId ?? tx.oldCategoryId ?? undefined
+      if ((input.type === 'EXPENSE' || tx.updated.type === 'EXPENSE') && categoryId) {
+        checkBudgetAlerts(ctx.session.user.id, categoryId)
+          .catch((err) => console.error('[budget] Alert check failed:', err))
+      }
+      return tx.updated
+    }),
 
   delete: protectedProcedure
     .input(z.object({ id: z.string(), }))
-    .mutation(({ ctx, input, }) => ctx.db.$transaction(async (prisma) => {
-      const old = await prisma.transaction.findUniqueOrThrow({ where: { id: input.id, userId: ctx.session.user.id, }, })
-      const updatedWallet = await prisma.wallet.update({
-        data: { balance: { increment: -getBalanceDelta(old.type, old.amount), }, },
-        select: { balance: true },
-        where: { id: old.walletId, userId: ctx.session.user.id, },
+    .mutation(async ({ ctx, input, }) => {
+      const { type, categoryId } = await ctx.db.$transaction(async (prisma) => {
+        const old = await prisma.transaction.findUniqueOrThrow({ where: { id: input.id, userId: ctx.session.user.id, }, })
+        const updatedWallet = await prisma.wallet.update({
+          data: { balance: { increment: -getBalanceDelta(old.type, old.amount), }, },
+          select: { balance: true },
+          where: { id: old.walletId, userId: ctx.session.user.id, },
+        })
+        await prisma.debt.updateMany({
+          data: { currentBalance: updatedWallet.balance, isPaidOff: updatedWallet.balance <= 0 },
+          where: { walletId: old.walletId },
+        })
+        await prisma.transaction.delete({ where: { id: input.id, }, })
+        return { type: old.type, categoryId: old.categoryId }
       })
-      await prisma.debt.updateMany({
-        data: { currentBalance: updatedWallet.balance, isPaidOff: updatedWallet.balance <= 0 },
-        where: { walletId: old.walletId },
-      })
-      await prisma.transaction.delete({ where: { id: input.id, }, })
-    })
-    ),
+      if (type === 'EXPENSE' && categoryId) {
+        checkBudgetAlerts(ctx.session.user.id, categoryId)
+          .catch((err) => console.error('[budget] Alert check failed:', err))
+      }
+    }),
 })

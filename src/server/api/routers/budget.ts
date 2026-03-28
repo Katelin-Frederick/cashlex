@@ -6,6 +6,8 @@ import { protectedProcedure, createTRPCRouter, } from '~/server/api/trpc'
 const budgetPeriodSchema = z.enum(['WEEKLY', 'MONTHLY', 'YEARLY'])
 
 const budgetInputSchema = z.object({
+  alertEnabled: z.boolean(),
+  alertThreshold: z.number().min(1).max(100),
   amount: z.number().positive(),
   categoryId: z.string().min(1),
   endDate: z.string().min(1),
@@ -97,6 +99,8 @@ export const budgetRouter = createTRPCRouter({
       endDate.setHours(23, 59, 59, 999)
       return ctx.db.budget.create({
         data: {
+          alertEnabled: input.alertEnabled,
+          alertThreshold: input.alertThreshold / 100,
           amount: input.amount,
           categoryId: input.categoryId,
           endDate,
@@ -118,6 +122,8 @@ export const budgetRouter = createTRPCRouter({
       endDate.setHours(23, 59, 59, 999)
       return ctx.db.budget.update({
         data: {
+          alertEnabled: input.alertEnabled,
+          alertThreshold: input.alertThreshold / 100,
           amount: input.amount,
           categoryId: input.categoryId,
           endDate,

@@ -29,6 +29,8 @@ const transactionSchema = z.object({
 })
 
 const budgetSchema = z.object({
+  alertEnabled: z.boolean(),
+  alertThreshold: z.coerce.number().min(1).max(100),
   name: z.string().min(1, 'Name is required').max(50),
   amount: z.number().positive('Amount must be positive'),
   period: z.enum(['WEEKLY', 'MONTHLY', 'YEARLY']),
@@ -135,6 +137,8 @@ describe('transactionSchema', () => {
 
 describe('budgetSchema', () => {
   const base = {
+    alertEnabled: true,
+    alertThreshold: 80,
     name: 'Food Budget',
     amount: 500,
     period: 'MONTHLY' as const,
@@ -142,6 +146,7 @@ describe('budgetSchema', () => {
     startDate: new Date('2026-03-01'),
     endDate: new Date('2026-03-31'),
   }
+
 
   it('accepts valid input', () => {
     expect(() => budgetSchema.parse(base)).not.toThrow()
@@ -164,5 +169,23 @@ describe('budgetSchema', () => {
 
   it('rejects missing categoryId', () => {
     expect(budgetSchema.safeParse({ ...base, categoryId: '' }).success).toBe(false)
+  })
+
+  it('rejects alertThreshold below 1', () => {
+    expect(budgetSchema.safeParse({ ...base, alertThreshold: 0 }).success).toBe(false)
+  })
+
+  it('rejects alertThreshold above 100', () => {
+    expect(budgetSchema.safeParse({ ...base, alertThreshold: 101 }).success).toBe(false)
+  })
+
+  it('accepts alertEnabled: false', () => {
+    expect(budgetSchema.safeParse({ ...base, alertEnabled: false }).success).toBe(true)
+  })
+
+  it('coerces alertThreshold string to number', () => {
+    const result = budgetSchema.safeParse({ ...base, alertThreshold: '75' })
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.alertThreshold).toBe(75)
   })
 })

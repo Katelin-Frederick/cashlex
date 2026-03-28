@@ -19,6 +19,7 @@ import {
   SelectItem,
   Select,
 } from '~/components/ui/select'
+import { Switch, } from '~/components/ui/switch'
 import { Button, } from '~/components/ui/button'
 import { Input, } from '~/components/ui/input'
 
@@ -34,6 +35,8 @@ export type Category = {
 // ── Schema ─────────────────────────────────────────────────────────────
 
 export const budgetSchema = z.object({
+  alertEnabled: z.boolean(),
+  alertThreshold: z.coerce.number().min(1, 'Must be at least 1%').max(100, 'Must be at most 100%'),
   amount: z.coerce.number().positive('Amount must be greater than 0'),
   categoryId: z.string().min(1, 'Please select a category'),
   endDate: z.string().min(1, 'Please select an end date'),
@@ -207,6 +210,39 @@ export const BudgetForm = ({
               </FormItem>
             )}
           />
+        </div>
+
+        {/* Alert settings */}
+        <div className='rounded-lg border p-4 space-y-3'>
+          <FormField
+            control={form.control}
+            name='alertEnabled'
+            render={({ field, }) => (
+              <div className='flex items-center justify-between'>
+                <div>
+                  <p className='text-sm font-medium'>Budget alerts</p>
+                  <p className='text-muted-foreground text-xs'>Email me when spending nears the limit</p>
+                </div>
+                <Switch checked={field.value} onCheckedChange={field.onChange} />
+              </div>
+            )}
+          />
+
+          {form.watch('alertEnabled') && (
+            <FormField
+              control={form.control}
+              name='alertThreshold'
+              render={({ field, }) => (
+                <FormItem>
+                  <FormLabel>Alert threshold (%)</FormLabel>
+                  <FormControl>
+                    <Input inputMode='numeric' placeholder='80' {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
         </div>
 
         <div className='flex justify-end gap-2 pt-2'>

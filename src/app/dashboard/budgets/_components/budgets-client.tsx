@@ -19,6 +19,8 @@ import {
   DialogTitle,
   Dialog,
 } from '~/components/ui/dialog'
+import { BellRing, } from 'lucide-react'
+
 import { CardContent, CardHeader, CardTitle, Card, } from '~/components/ui/card'
 import { Button, } from '~/components/ui/button'
 import { api, } from '~/trpc/react'
@@ -30,6 +32,9 @@ import { BudgetForm, } from './budget-form'
 // ── Types ──────────────────────────────────────────────────────────────
 
 type Budget = {
+  alertEnabled: boolean
+  alertSentAt: Date | null
+  alertThreshold: number
   amount: number
   category: { color: string | null; icon: string | null; id: string; name: string; type: string }
   categoryId: string
@@ -67,9 +72,12 @@ const BudgetCard = ({ budget, onDelete, onEdit, }: BudgetCardProps) => {
   const percent = budget.amount > 0 ? (budget.spent / budget.amount) * 100 : 0
   const isOverBudget = budget.spent > budget.amount
   const remaining = budget.amount - budget.spent
+  const alertFired = budget.alertEnabled && !!budget.alertSentAt
+  const nearThreshold = budget.alertEnabled && !budget.alertSentAt &&
+    percent >= (budget.alertThreshold * 100 * 0.9)
 
   return (
-    <Card>
+    <Card className={alertFired ? 'border-amber-400' : ''}>
       <CardHeader className='pb-3'>
         <div className='flex items-start justify-between gap-2'>
           <div className='flex items-center gap-2 overflow-hidden'>
@@ -84,9 +92,14 @@ const BudgetCard = ({ budget, onDelete, onEdit, }: BudgetCardProps) => {
               <p className='text-muted-foreground truncate text-xs'>{budget.category.name}</p>
             </div>
           </div>
-          <span className='shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground'>
-            {PERIOD_LABELS[budget.period]}
-          </span>
+          <div className='flex shrink-0 items-center gap-1.5'>
+            {(alertFired || nearThreshold) && (
+              <BellRing className={`size-3.5 ${alertFired ? 'text-amber-500' : 'text-muted-foreground'}`} />
+            )}
+            <span className='rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground'>
+              {PERIOD_LABELS[budget.period]}
+            </span>
+          </div>
         </div>
       </CardHeader>
 
@@ -162,6 +175,8 @@ export const BudgetsClient = () => {
   const remove = api.budget.delete.useMutation({ onSuccess: () => { setDeleteBudget(null); invalidate() }, })
 
   const createDefaults: BudgetFormValues = {
+    alertEnabled: true,
+    alertThreshold: 80,
     amount: 0,
     categoryId: '',
     endDate: '',
@@ -268,6 +283,8 @@ export const BudgetsClient = () => {
             <BudgetForm
               categories={categories}
               defaultValues={{
+                alertEnabled: editBudget.alertEnabled,
+                alertThreshold: Math.round(editBudget.alertThreshold * 100),
                 amount: editBudget.amount,
                 categoryId: editBudget.categoryId,
                 endDate: toDateInput(editBudget.endDate),

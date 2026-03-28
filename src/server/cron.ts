@@ -4,6 +4,7 @@ import { db, } from '~/server/db'
 import { sendMail, } from '~/server/mailer'
 import { recurringReceiptHtml, recurringReceiptSubject, } from '~/server/emails/recurring-receipt'
 import { fetchWeeklyDigestData, weeklyDigestHtml, weeklyDigestSubject, } from '~/server/emails/weekly-digest'
+import { checkBudgetAlerts, } from '~/server/budgetAlerts'
 
 // ── Date advancement ───────────────────────────────────────────────────
 
@@ -136,12 +137,38 @@ const sendWeeklyDigests = async () => {
   }
 }
 
+// ── Daily budget alert scan ─────────────────────────────────────────────
+
+const checkAllBudgetAlerts = async () => {
+  const now = new Date()
+
+  const budgets = await db.budget.findMany({
+    select: { categoryId: true, userId: true, },
+    where: { alertEnabled: true, alertSentAt: null, endDate: { gte: now, }, startDate: { lte: now, }, },
+  })
+
+  if (budgets.length === 0) return
+
+  console.log(`[cron] Checking budget alerts for ${budgets.length} active budget(s)…`)
+
+  const checked = new Set<string>()
+  for (const b of budgets) {
+    const key = `${b.userId}:${b.categoryId}`
+    if (!checked.has(key)) {
+      checked.add(key)
+      await checkBudgetAlerts(b.userId, b.categoryId)
+        .catch((err) => console.error('[cron] Budget alert check failed:', err))
+    }
+  }
+}
+
 // ── Start ──────────────────────────────────────────────────────────────
 
 export const startCron = () => {
-  // Midnight daily — process recurring expenses
+  // Midnight daily — process recurring expenses + check budget alerts
   cron.schedule('0 0 * * *', () => {
     processDueExpenses().catch((err) => console.error('[cron] Unexpected error:', err))
+    checkAllBudgetAlerts().catch((err) => console.error('[cron] Budget alert scan error:', err))
   })
 
   // 6pm every Sunday — send weekly digest
