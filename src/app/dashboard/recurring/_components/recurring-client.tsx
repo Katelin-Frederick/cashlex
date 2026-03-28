@@ -40,8 +40,8 @@ type RecurringExpense = {
   isActive: boolean
   name: string
   nextDueDate: Date
-  walletId: string
-  wallet: { name: string }
+  walletId: string | null
+  wallet: { name: string } | null
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────
@@ -260,7 +260,7 @@ export const RecurringClient = () => {
                 frequency: editExpense.frequency,
                 name: editExpense.name,
                 nextDueDate: toDateInput(editExpense.nextDueDate),
-                walletId: editExpense.walletId,
+                walletId: editExpense.walletId ?? '',
               }}
               isPending={update.isPending}
               submitLabel='Save changes'

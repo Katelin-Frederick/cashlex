@@ -148,6 +148,46 @@ export const dashboardRouter = createTRPCRouter({
     where: { userId: ctx.session.user.id, },
   })),
 
+  // Net worth at end of each of the last 12 months — used by net worth history line chart
+  netWorthHistory: protectedProcedure.query(async ({ ctx, }) => {
+    const userId = ctx.session.user.id
+    const now = new Date()
+
+    const months = Array.from({ length: 12, }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1)
+      return {
+        end: new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999),
+        label: d.toLocaleString('en-US', { month: 'short', year: '2-digit', }),
+      }
+    })
+
+    const [user, wallets, txs] = await Promise.all([
+      ctx.db.user.findUniqueOrThrow({ select: { baseCurrency: true, }, where: { id: userId, }, }),
+      ctx.db.wallet.findMany({ select: { balance: true, currency: true, id: true, type: true, }, where: { userId, }, }),
+      ctx.db.transaction.findMany({
+        select: { amount: true, date: true, type: true, walletId: true, },
+        where: { userId, },
+      }),
+    ])
+
+    const rates = await getExchangeRates(user.baseCurrency)
+
+    return months.map((m) => {
+      const netWorth = wallets.reduce((sum, wallet) => {
+        // Sum of balance deltas from transactions that occurred AFTER this month end
+        const futureDelta = txs
+          .filter((t) => t.walletId === wallet.id && t.date > m.end)
+          .reduce((acc, t) => acc + (t.type === 'INCOME' ? t.amount : -t.amount), 0)
+
+        const historicalBalance = wallet.balance - futureDelta
+        const contribution = wallet.type === 'CREDIT' ? Math.min(0, historicalBalance) : historicalBalance
+        return sum + convertToBase(contribution, wallet.currency, rates)
+      }, 0)
+
+      return { label: m.label, netWorth, }
+    })
+  }),
+
   // Active budgets (date range includes today) with spent
   activeBudgets: protectedProcedure.query(async ({ ctx, }) => {
     const userId = ctx.session.user.id
