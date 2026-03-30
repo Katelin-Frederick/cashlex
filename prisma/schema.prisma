@@ -61,6 +61,7 @@ model User {
     emailNotificationsReceipt     Boolean @default(true)
     emailNotificationsDigest      Boolean @default(true)
     emailNotificationsBudgetAlert Boolean @default(true)
+    emailNotificationsBillReminder Boolean @default(true)
 
     accounts          Account[]
     sessions          Session[]
@@ -195,6 +196,10 @@ model RecurringExpense {
     frequency   RecurringFrequency
     nextDueDate DateTime
     isActive    Boolean            @default(true)
+
+    reminderEnabled     Boolean   @default(true)
+    reminderDaysAhead   Int       @default(3)
+    reminderSentForDate DateTime?
 
     userId     String
     user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)

@@ -5,6 +5,7 @@ import { sendMail, } from '~/server/mailer'
 import { recurringReceiptHtml, recurringReceiptSubject, } from '~/server/emails/recurring-receipt'
 import { fetchWeeklyDigestData, weeklyDigestHtml, weeklyDigestSubject, } from '~/server/emails/weekly-digest'
 import { checkBudgetAlerts, } from '~/server/budgetAlerts'
+import { billReminderHtml, billReminderSubject, } from '~/server/emails/bill-reminder'
 
 // ── Date advancement ───────────────────────────────────────────────────
 
@@ -162,6 +163,75 @@ const checkAllBudgetAlerts = async () => {
   }
 }
 
+// ── Bill due reminders ─────────────────────────────────────────────────
+
+export const sendBillReminders = async () => {
+  const now = new Date()
+  const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
+  const expenses = await db.recurringExpense.findMany({
+    include: {
+      user: { select: { email: true, emailNotificationsBillReminder: true, name: true, }, },
+      wallet: { select: { name: true, }, },
+    },
+    where: { isActive: true, reminderEnabled: true, walletId: { not: null, }, },
+  })
+
+  if (expenses.length === 0) return
+
+  console.log(`[cron] Checking bill reminders for ${expenses.length} recurring expense(s)…`)
+
+  for (const expense of expenses) {
+    const dueMidnight = new Date(
+      expense.nextDueDate.getFullYear(),
+      expense.nextDueDate.getMonth(),
+      expense.nextDueDate.getDate(),
+    )
+    const daysUntilDue = Math.floor(
+      (dueMidnight.getTime() - todayMidnight.getTime()) / (1000 * 60 * 60 * 24)
+    )
+
+    if (daysUntilDue > expense.reminderDaysAhead || daysUntilDue < 0) continue
+
+    // Skip if already sent for this occurrence
+    if (
+      expense.reminderSentForDate &&
+      expense.reminderSentForDate.getTime() === expense.nextDueDate.getTime()
+    ) continue
+
+    // Stamp first, then send (best-effort)
+    try {
+      await db.recurringExpense.update({
+        data: { reminderSentForDate: expense.nextDueDate, },
+        where: { id: expense.id, },
+      })
+    } catch (err) {
+      console.error(`[cron] Failed to stamp reminder for "${expense.name}":`, err)
+      continue
+    }
+
+    if (expense.user.email && expense.user.emailNotificationsBillReminder) {
+      try {
+        await sendMail({
+          html: billReminderHtml({
+            amount: expense.amount,
+            daysAhead: daysUntilDue,
+            dueDate: expense.nextDueDate,
+            name: expense.name,
+            userName: expense.user.name ?? expense.user.email,
+            walletName: expense.wallet?.name ?? 'Unknown wallet',
+          }),
+          subject: billReminderSubject(expense.name, daysUntilDue),
+          to: expense.user.email,
+        })
+        console.log(`[cron] Bill reminder sent to ${expense.user.email} for "${expense.name}" (due in ${daysUntilDue} day(s))`)
+      } catch (err) {
+        console.error(`[cron] Bill reminder email failed for "${expense.name}":`, err)
+      }
+    }
+  }
+}
+
 // ── Start ──────────────────────────────────────────────────────────────
 
 export const startCron = () => {
@@ -176,8 +246,14 @@ export const startCron = () => {
     sendWeeklyDigests().catch((err) => console.error('[cron] Digest error:', err))
   })
 
+  // 8am daily — send bill due reminders
+  cron.schedule('0 8 * * *', () => {
+    sendBillReminders().catch((err) => console.error('[cron] Bill reminder error:', err))
+  })
+
   // Process on startup to catch anything missed since last run
   processDueExpenses().catch((err) => console.error('[cron] Startup processing error:', err))
+  sendBillReminders().catch((err) => console.error('[cron] Startup bill reminder error:', err))
 
   console.log('[cron] Recurring expense scheduler started')
 }

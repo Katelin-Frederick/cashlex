@@ -21,6 +21,8 @@ import {
   DialogTitle,
   Dialog,
 } from '~/components/ui/dialog'
+import { Bell, } from 'lucide-react'
+
 import { Button, } from '~/components/ui/button'
 import { api, } from '~/trpc/react'
 
@@ -40,6 +42,9 @@ type RecurringExpense = {
   isActive: boolean
   name: string
   nextDueDate: Date
+  reminderDaysAhead: number
+  reminderEnabled: boolean
+  reminderSentForDate: Date | null
   walletId: string | null
   wallet: { name: string } | null
 }
@@ -65,8 +70,15 @@ type CardProps = {
 }
 
 const RecurringCard = ({ expense, onDelete, onEdit, onToggle, }: CardProps) => {
+  const todayMidnight = new Date(new Date().toDateString())
+  const dueMidnight = new Date(new Date(expense.nextDueDate).toDateString())
+  const daysUntilDue = Math.floor(
+    (dueMidnight.getTime() - todayMidnight.getTime()) / (1000 * 60 * 60 * 24)
+  )
   const dueSoon = !isPast(expense.nextDueDate) &&
     (new Date(expense.nextDueDate).getTime() - Date.now()) < 3 * 24 * 60 * 60 * 1000
+  const reminderArmed = expense.reminderEnabled &&
+    daysUntilDue <= expense.reminderDaysAhead && daysUntilDue >= 0
 
   return (
     <Card className={expense.isActive ? '' : 'opacity-60'}>
@@ -86,9 +98,14 @@ const RecurringCard = ({ expense, onDelete, onEdit, onToggle, }: CardProps) => {
               <p className='text-muted-foreground truncate text-xs'>{expense.wallet?.name ?? 'No wallet'}</p>
             </div>
           </div>
-          <span className='shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground'>
-            {FREQUENCY_LABELS[expense.frequency]}
-          </span>
+          <div className='flex shrink-0 items-center gap-1.5'>
+            {expense.reminderEnabled && (
+              <Bell className={`size-3.5 ${reminderArmed ? 'text-amber-500' : 'text-muted-foreground'}`} />
+            )}
+            <span className='rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground'>
+              {FREQUENCY_LABELS[expense.frequency]}
+            </span>
+          </div>
         </div>
       </CardHeader>
 
@@ -170,6 +187,8 @@ export const RecurringClient = () => {
     frequency: 'MONTHLY',
     name: '',
     nextDueDate: todayString(),
+    reminderDaysAhead: 3,
+    reminderEnabled: true,
     walletId: '',
   }
 
@@ -260,6 +279,8 @@ export const RecurringClient = () => {
                 frequency: editExpense.frequency,
                 name: editExpense.name,
                 nextDueDate: toDateInput(editExpense.nextDueDate),
+                reminderDaysAhead: editExpense.reminderDaysAhead,
+                reminderEnabled: editExpense.reminderEnabled,
                 walletId: editExpense.walletId ?? '',
               }}
               isPending={update.isPending}
