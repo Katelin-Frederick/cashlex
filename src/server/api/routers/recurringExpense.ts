@@ -12,6 +12,8 @@ const recurringInputSchema = z.object({
   frequency: frequencySchema,
   name: z.string().min(1).max(50),
   nextDueDate: z.string().min(1),
+  reminderDaysAhead: z.number().int().min(0).max(30),
+  reminderEnabled: z.boolean(),
   walletId: z.string().min(1),
 })
 
@@ -66,6 +68,8 @@ export const recurringExpenseRouter = createTRPCRouter({
           frequency: input.frequency,
           name: input.name,
           nextDueDate: new Date(input.nextDueDate),
+          reminderDaysAhead: input.reminderDaysAhead,
+          reminderEnabled: input.reminderEnabled,
           userId: ctx.session.user.id,
           walletId: input.walletId,
         },
@@ -80,6 +84,8 @@ export const recurringExpenseRouter = createTRPCRouter({
       })
       if (!existing) throw new TRPCError({ code: 'NOT_FOUND', message: 'Recurring expense not found.', })
 
+      const dateChanged = new Date(input.nextDueDate).getTime() !== existing.nextDueDate.getTime()
+
       return ctx.db.recurringExpense.update({
         data: {
           amount: input.amount,
@@ -88,6 +94,9 @@ export const recurringExpenseRouter = createTRPCRouter({
           frequency: input.frequency,
           name: input.name,
           nextDueDate: new Date(input.nextDueDate),
+          reminderDaysAhead: input.reminderDaysAhead,
+          reminderEnabled: input.reminderEnabled,
+          ...(dateChanged ? { reminderSentForDate: null, } : {}),
           walletId: input.walletId,
         },
         where: { id: input.id, },

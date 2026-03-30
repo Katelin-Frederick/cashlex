@@ -21,6 +21,7 @@ import {
   SelectValue,
   Select,
 } from '~/components/ui/select'
+import { Switch, } from '~/components/ui/switch'
 
 // ── Schema ─────────────────────────────────────────────────────────────
 
@@ -31,6 +32,8 @@ export const recurringSchema = z.object({
   frequency: z.enum(['DAILY', 'WEEKLY', 'BIWEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY']),
   name: z.string().min(1, 'Name is required').max(50),
   nextDueDate: z.string().min(1, 'Due date is required'),
+  reminderDaysAhead: z.coerce.number().int().min(0).max(30),
+  reminderEnabled: z.boolean(),
   walletId: z.string().min(1, 'Wallet is required'),
 })
 
@@ -210,6 +213,39 @@ export const RecurringForm = ({ categories, defaultValues, isPending, onCancel, 
             </FormItem>
           )}
         />
+
+        {/* Bill reminders */}
+        <div className='rounded-lg border p-4 space-y-3'>
+          <FormField
+            control={form.control}
+            name='reminderEnabled'
+            render={({ field, }) => (
+              <div className='flex items-center justify-between'>
+                <div>
+                  <p className='text-sm font-medium'>Bill reminders</p>
+                  <p className='text-muted-foreground text-xs'>Email me before this bill is due</p>
+                </div>
+                <Switch checked={field.value} onCheckedChange={field.onChange} />
+              </div>
+            )}
+          />
+
+          {form.watch('reminderEnabled') && (
+            <FormField
+              control={form.control}
+              name='reminderDaysAhead'
+              render={({ field, }) => (
+                <FormItem>
+                  <FormLabel>Days before due date</FormLabel>
+                  <FormControl>
+                    <Input inputMode='numeric' placeholder='3' {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+        </div>
 
         <div className='flex justify-end gap-2 pt-2'>
           <Button type='button' variant='outline' onClick={onCancel}>Cancel</Button>

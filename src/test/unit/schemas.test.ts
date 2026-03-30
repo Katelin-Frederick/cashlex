@@ -189,3 +189,75 @@ describe('budgetSchema', () => {
     if (result.success) expect(result.data.alertThreshold).toBe(75)
   })
 })
+
+// ── Recurring schema ──────────────────────────────────────────────────
+
+const recurringSchema = z.object({
+  amount: z.number().positive('Must be positive'),
+  categoryId: z.string().optional(),
+  description: z.string().optional(),
+  frequency: z.enum(['DAILY', 'WEEKLY', 'BIWEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY']),
+  name: z.string().min(1, 'Name is required').max(50),
+  nextDueDate: z.string().min(1, 'Due date is required'),
+  reminderDaysAhead: z.coerce.number().int().min(0).max(30),
+  reminderEnabled: z.boolean(),
+  walletId: z.string().min(1, 'Wallet is required'),
+})
+
+describe('recurringSchema', () => {
+  const base = {
+    amount: 50,
+    frequency: 'MONTHLY' as const,
+    name: 'Netflix',
+    nextDueDate: '2026-04-01',
+    reminderDaysAhead: 3,
+    reminderEnabled: true,
+    walletId: 'wallet-1',
+  }
+
+  it('accepts valid input', () => {
+    expect(() => recurringSchema.parse(base)).not.toThrow()
+  })
+
+  it('rejects non-positive amount', () => {
+    expect(recurringSchema.safeParse({ ...base, amount: 0 }).success).toBe(false)
+    expect(recurringSchema.safeParse({ ...base, amount: -10 }).success).toBe(false)
+  })
+
+  it('rejects empty name', () => {
+    expect(recurringSchema.safeParse({ ...base, name: '' }).success).toBe(false)
+  })
+
+  it('rejects empty walletId', () => {
+    expect(recurringSchema.safeParse({ ...base, walletId: '' }).success).toBe(false)
+  })
+
+  it('accepts all valid frequencies', () => {
+    const freqs = ['DAILY', 'WEEKLY', 'BIWEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY'] as const
+    for (const frequency of freqs) {
+      expect(recurringSchema.safeParse({ ...base, frequency }).success).toBe(true)
+    }
+  })
+
+  it('rejects reminderDaysAhead below 0', () => {
+    expect(recurringSchema.safeParse({ ...base, reminderDaysAhead: -1 }).success).toBe(false)
+  })
+
+  it('rejects reminderDaysAhead above 30', () => {
+    expect(recurringSchema.safeParse({ ...base, reminderDaysAhead: 31 }).success).toBe(false)
+  })
+
+  it('accepts reminderDaysAhead of 0 (same-day reminder)', () => {
+    expect(recurringSchema.safeParse({ ...base, reminderDaysAhead: 0 }).success).toBe(true)
+  })
+
+  it('accepts reminderEnabled: false', () => {
+    expect(recurringSchema.safeParse({ ...base, reminderEnabled: false }).success).toBe(true)
+  })
+
+  it('coerces reminderDaysAhead string to integer', () => {
+    const result = recurringSchema.safeParse({ ...base, reminderDaysAhead: '7' })
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.reminderDaysAhead).toBe(7)
+  })
+})
