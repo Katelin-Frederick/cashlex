@@ -72,6 +72,8 @@ describe('wallet.update', () => {
 
     const updated = await caller.wallet.update({
       id: wallet.id,
+      lowBalanceAlert: false,
+      lowBalanceThreshold: 100,
       name: 'New Name',
       type: 'SAVINGS',
       currency: 'USD',
@@ -88,7 +90,7 @@ describe('wallet.update', () => {
 
     const caller = createCaller(createTestContext(userB.id))
     await expect(
-      caller.wallet.update({ id: wallet.id, name: 'Hacked', type: 'CHECKING', currency: 'USD' })
+      caller.wallet.update({ id: wallet.id, lowBalanceAlert: false, lowBalanceThreshold: 100, name: 'Hacked', type: 'CHECKING', currency: 'USD' })
     ).rejects.toThrow()
   })
 })
@@ -147,7 +149,7 @@ describe('CREDIT wallet auto-creates debt', () => {
     const caller = createCaller(createTestContext(user.id))
 
     const wallet = await caller.wallet.create({ name: 'Old Name', type: 'CREDIT', balance: 2000, currency: 'USD' })
-    await caller.wallet.update({ id: wallet.id, name: 'New Name', type: 'CREDIT', currency: 'USD' })
+    await caller.wallet.update({ id: wallet.id, lowBalanceAlert: false, lowBalanceThreshold: 100, name: 'New Name', type: 'CREDIT', currency: 'USD' })
 
     const debt = await testDb.debt.findFirst({ where: { walletId: wallet.id } })
     expect(debt!.name).toBe('New Name')
@@ -175,7 +177,7 @@ describe('CREDIT wallet auto-creates debt', () => {
     const debt = await testDb.debt.findFirst({ where: { walletId: wallet.id } })
     expect(debt).not.toBeNull()
 
-    await caller.wallet.update({ id: wallet.id, name: 'Card', type: 'CHECKING', currency: 'USD' })
+    await caller.wallet.update({ id: wallet.id, lowBalanceAlert: false, lowBalanceThreshold: 100, name: 'Card', type: 'CHECKING', currency: 'USD' })
 
     const deletedDebt = await testDb.debt.findUnique({ where: { id: debt!.id } })
     expect(deletedDebt).toBeNull()
@@ -186,7 +188,7 @@ describe('CREDIT wallet auto-creates debt', () => {
     const caller = createCaller(createTestContext(user.id))
 
     const wallet = await createWallet(user.id, { name: 'My Card', type: 'CHECKING', balance: 0 })
-    await caller.wallet.update({ id: wallet.id, name: 'My Card', type: 'CREDIT', currency: 'USD' })
+    await caller.wallet.update({ id: wallet.id, lowBalanceAlert: false, lowBalanceThreshold: 100, name: 'My Card', type: 'CREDIT', currency: 'USD' })
 
     const debt = await testDb.debt.findFirst({ where: { walletId: wallet.id } })
     expect(debt).not.toBeNull()

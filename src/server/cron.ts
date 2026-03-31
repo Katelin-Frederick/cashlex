@@ -5,6 +5,7 @@ import { sendMail, } from '~/server/mailer'
 import { recurringReceiptHtml, recurringReceiptSubject, } from '~/server/emails/recurring-receipt'
 import { fetchWeeklyDigestData, weeklyDigestHtml, weeklyDigestSubject, } from '~/server/emails/weekly-digest'
 import { checkBudgetAlerts, } from '~/server/budgetAlerts'
+import { checkLowBalance, } from '~/server/lowBalanceAlert'
 import { billReminderHtml, billReminderSubject, } from '~/server/emails/bill-reminder'
 
 // ── Date advancement ───────────────────────────────────────────────────
@@ -80,6 +81,13 @@ const processDueExpenses = async () => {
       })
 
       console.log(`[cron] Created ${dueDates.length} transaction(s) for "${expense.name}" ($${(expense.amount * dueDates.length).toFixed(2)} total)`)
+
+      // Best-effort low balance check after wallet was decremented
+      const wallet = await db.wallet.findUnique({ select: { balance: true }, where: { id: expense.walletId!, }, })
+      if (wallet) {
+        checkLowBalance(expense.walletId!, wallet.balance)
+          .catch((err) => console.error(`[lowBalance] Cron check failed for "${expense.name}":`, err))
+      }
     } catch (err) {
       console.error(`[cron] Failed to process "${expense.name}":`, err)
       continue

@@ -38,10 +38,12 @@ export const walletRouter = createTRPCRouter({
 
   create: protectedProcedure
     .input(z.object({
+      currency: z.string().length(3).default('USD'),
+      balance: z.number().default(0),
+      lowBalanceAlert: z.boolean().default(false),
+      lowBalanceThreshold: z.number().min(0).default(100),
       name: z.string().min(1, 'Name is required').max(50),
       type: walletTypeSchema,
-      balance: z.number().default(0),
-      currency: z.string().length(3).default('USD'),
     }))
     .mutation(async ({ ctx, input, }) => {
       const wallet = await ctx.db.wallet.create({
@@ -66,10 +68,12 @@ export const walletRouter = createTRPCRouter({
 
   update: protectedProcedure
     .input(z.object({
+      currency: z.string().length(3).default('USD'),
       id: z.string(),
+      lowBalanceAlert: z.boolean(),
+      lowBalanceThreshold: z.number().min(0),
       name: z.string().min(1).max(50),
       type: walletTypeSchema,
-      currency: z.string().length(3).default('USD'),
     }))
     .mutation(async ({ ctx, input, }) => {
       const { id, ...data } = input

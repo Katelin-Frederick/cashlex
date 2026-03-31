@@ -60,7 +60,8 @@ model User {
     baseCurrency  String    @default("USD")
     emailNotificationsReceipt     Boolean @default(true)
     emailNotificationsDigest      Boolean @default(true)
-    emailNotificationsBudgetAlert Boolean @default(true)
+    emailNotificationsBudgetAlert   Boolean @default(true)
+    emailNotificationsLowBalance    Boolean @default(true)
     emailNotificationsBillReminder Boolean @default(true)
 
     accounts          Account[]
@@ -94,6 +95,10 @@ model Wallet {
     type     WalletType @default(CHECKING)
     balance  Float      @default(0)
     currency String     @default("USD")
+
+    lowBalanceAlert       Boolean   @default(false)
+    lowBalanceThreshold   Float     @default(100)
+    lowBalanceAlertSentAt DateTime?
 
     userId            String
     user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
