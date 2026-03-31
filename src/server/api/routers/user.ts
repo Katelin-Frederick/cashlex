@@ -11,7 +11,10 @@ export const userRouter = createTRPCRouter({
       select: {
         baseCurrency: true,
         email: true,
+        emailNotificationsBudgetAlert: true,
+        emailNotificationsBillReminder: true,
         emailNotificationsDigest: true,
+        emailNotificationsLowBalance: true,
         emailNotificationsReceipt: true,
         name: true,
         password: true,
@@ -21,7 +24,10 @@ export const userRouter = createTRPCRouter({
     return {
       baseCurrency: user.baseCurrency,
       email: user.email ?? '',
+      emailNotificationsBudgetAlert: user.emailNotificationsBudgetAlert,
+      emailNotificationsBillReminder: user.emailNotificationsBillReminder,
       emailNotificationsDigest: user.emailNotificationsDigest,
+      emailNotificationsLowBalance: user.emailNotificationsLowBalance,
       emailNotificationsReceipt: user.emailNotificationsReceipt,
       hasPassword: !!user.password,
       name: user.name ?? '',
@@ -71,7 +77,10 @@ export const userRouter = createTRPCRouter({
 
   updateNotifications: protectedProcedure
     .input(z.object({
+      emailNotificationsBudgetAlert: z.boolean(),
+      emailNotificationsBillReminder: z.boolean(),
       emailNotificationsDigest: z.boolean(),
+      emailNotificationsLowBalance: z.boolean(),
       emailNotificationsReceipt: z.boolean(),
     }))
     .mutation(async ({ ctx, input, }) => ctx.db.user.update({

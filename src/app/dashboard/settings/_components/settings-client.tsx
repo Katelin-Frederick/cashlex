@@ -200,11 +200,43 @@ const PasswordSection = () => {
 
 type PreferencesProps = {
   baseCurrency: string
+  emailNotificationsBudgetAlert: boolean
+  emailNotificationsBillReminder: boolean
   emailNotificationsDigest: boolean
+  emailNotificationsLowBalance: boolean
   emailNotificationsReceipt: boolean
 }
 
-const PreferencesSection = ({ baseCurrency, emailNotificationsDigest, emailNotificationsReceipt, }: PreferencesProps) => {
+const NotificationRow = ({
+  title,
+  description,
+  checked,
+  disabled,
+  onChange,
+}: {
+  title: string
+  description: string
+  checked: boolean
+  disabled: boolean
+  onChange: (checked: boolean) => void
+}) => (
+  <div className='flex items-center justify-between gap-4'>
+    <div>
+      <p className='text-sm font-medium'>{title}</p>
+      <p className='text-muted-foreground text-xs'>{description}</p>
+    </div>
+    <Switch checked={checked} disabled={disabled} onCheckedChange={onChange} />
+  </div>
+)
+
+const PreferencesSection = ({
+  baseCurrency,
+  emailNotificationsBudgetAlert,
+  emailNotificationsBillReminder,
+  emailNotificationsDigest,
+  emailNotificationsLowBalance,
+  emailNotificationsReceipt,
+}: PreferencesProps) => {
   const utils = api.useUtils()
 
   const updateCurrency = api.user.updateBaseCurrency.useMutation({
@@ -217,6 +249,16 @@ const PreferencesSection = ({ baseCurrency, emailNotificationsDigest, emailNotif
   })
 
   const updateNotifications = api.user.updateNotifications.useMutation({ onSuccess: () => void utils.user.getProfile.invalidate(), })
+
+  const mutate = (overrides: Partial<Omit<PreferencesProps, 'baseCurrency'>>) =>
+    updateNotifications.mutate({
+      emailNotificationsBudgetAlert,
+      emailNotificationsBillReminder,
+      emailNotificationsDigest,
+      emailNotificationsLowBalance,
+      emailNotificationsReceipt,
+      ...overrides,
+    })
 
   return (
     <Card>
@@ -251,37 +293,45 @@ const PreferencesSection = ({ baseCurrency, emailNotificationsDigest, emailNotif
 
         <hr />
 
-        {/* Receipt emails */}
-        <div className='flex items-center justify-between gap-4'>
-          <div>
-            <p className='text-sm font-medium'>Recurring expense receipts</p>
-            <p className='text-muted-foreground text-xs'>Email me when a recurring expense is auto-processed.</p>
-          </div>
-          <Switch
-            checked={emailNotificationsReceipt}
-            disabled={updateNotifications.isPending}
-            onCheckedChange={(checked) => updateNotifications.mutate({
-              emailNotificationsDigest,
-              emailNotificationsReceipt: checked,
-            })}
-          />
-        </div>
+        <NotificationRow
+          title='Recurring expense receipts'
+          description='Email me when a recurring expense is auto-processed.'
+          checked={emailNotificationsReceipt}
+          disabled={updateNotifications.isPending}
+          onChange={(checked) => mutate({ emailNotificationsReceipt: checked })}
+        />
 
-        {/* Digest emails */}
-        <div className='flex items-center justify-between gap-4'>
-          <div>
-            <p className='text-sm font-medium'>Weekly spending digest</p>
-            <p className='text-muted-foreground text-xs'>Email me a weekly summary every Sunday.</p>
-          </div>
-          <Switch
-            checked={emailNotificationsDigest}
-            disabled={updateNotifications.isPending}
-            onCheckedChange={(checked) => updateNotifications.mutate({
-              emailNotificationsDigest: checked,
-              emailNotificationsReceipt,
-            })}
-          />
-        </div>
+        <NotificationRow
+          title='Weekly spending digest'
+          description='Email me a weekly summary every Sunday.'
+          checked={emailNotificationsDigest}
+          disabled={updateNotifications.isPending}
+          onChange={(checked) => mutate({ emailNotificationsDigest: checked })}
+        />
+
+        <NotificationRow
+          title='Budget alerts'
+          description='Email me when spending crosses a budget threshold.'
+          checked={emailNotificationsBudgetAlert}
+          disabled={updateNotifications.isPending}
+          onChange={(checked) => mutate({ emailNotificationsBudgetAlert: checked })}
+        />
+
+        <NotificationRow
+          title='Bill due reminders'
+          description='Email me before a recurring bill is due.'
+          checked={emailNotificationsBillReminder}
+          disabled={updateNotifications.isPending}
+          onChange={(checked) => mutate({ emailNotificationsBillReminder: checked })}
+        />
+
+        <NotificationRow
+          title='Low balance warnings'
+          description='Email me when a wallet balance drops below its threshold.'
+          checked={emailNotificationsLowBalance}
+          disabled={updateNotifications.isPending}
+          onChange={(checked) => mutate({ emailNotificationsLowBalance: checked })}
+        />
       </CardContent>
     </Card>
   )
@@ -369,7 +419,10 @@ export const SettingsClient = () => {
 
       <PreferencesSection
         baseCurrency={profile.baseCurrency}
+        emailNotificationsBudgetAlert={profile.emailNotificationsBudgetAlert}
+        emailNotificationsBillReminder={profile.emailNotificationsBillReminder}
         emailNotificationsDigest={profile.emailNotificationsDigest}
+        emailNotificationsLowBalance={profile.emailNotificationsLowBalance}
         emailNotificationsReceipt={profile.emailNotificationsReceipt}
       />
 
