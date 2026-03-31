@@ -2,6 +2,7 @@ import { z, } from 'zod'
 
 import { protectedProcedure, createTRPCRouter, } from '~/server/api/trpc'
 import { checkBudgetAlerts, } from '~/server/budgetAlerts'
+import { checkLowBalance, } from '~/server/lowBalanceAlert'
 
 const transactionTypeSchema = z.enum(['INCOME', 'EXPENSE', 'TRANSFER'])
 
@@ -111,13 +112,15 @@ export const transactionRouter = createTRPCRouter({
           data: { currentBalance: updatedWallet.balance, isPaidOff: updatedWallet.balance <= 0 },
           where: { walletId: input.walletId },
         })
-        return created
+        return { created, walletBalance: updatedWallet.balance }
       })
       if (input.type === 'EXPENSE' && input.categoryId) {
         checkBudgetAlerts(ctx.session.user.id, input.categoryId)
           .catch((err) => console.error('[budget] Alert check failed:', err))
       }
-      return tx
+      checkLowBalance(input.walletId, tx.walletBalance)
+        .catch((err) => console.error('[lowBalance] Check failed:', err))
+      return tx.created
     }),
 
   update: protectedProcedure
@@ -141,6 +144,8 @@ export const transactionRouter = createTRPCRouter({
           where: { id: input.id, },
         })
 
+        const balances: { walletId: string; balance: number }[] = []
+
         if (old.walletId !== input.walletId) {
           // Reverse old wallet, apply to new wallet separately
           const oldWallet = await prisma.wallet.update({
@@ -152,6 +157,8 @@ export const transactionRouter = createTRPCRouter({
             data: { currentBalance: oldWallet.balance, isPaidOff: oldWallet.balance <= 0 },
             where: { walletId: old.walletId },
           })
+          balances.push({ walletId: old.walletId, balance: oldWallet.balance })
+
           const newWallet = await prisma.wallet.update({
             data: { balance: { increment: newDelta, }, },
             select: { balance: true },
@@ -161,6 +168,7 @@ export const transactionRouter = createTRPCRouter({
             data: { currentBalance: newWallet.balance, isPaidOff: newWallet.balance <= 0 },
             where: { walletId: input.walletId },
           })
+          balances.push({ walletId: input.walletId, balance: newWallet.balance })
         } else {
           const updatedWallet = await prisma.wallet.update({
             data: { balance: { increment: reverseDelta + newDelta, }, },
@@ -171,9 +179,10 @@ export const transactionRouter = createTRPCRouter({
             data: { currentBalance: updatedWallet.balance, isPaidOff: updatedWallet.balance <= 0 },
             where: { walletId: input.walletId },
           })
+          balances.push({ walletId: input.walletId, balance: updatedWallet.balance })
         }
 
-        return { updated, oldCategoryId: old.categoryId }
+        return { updated, oldCategoryId: old.categoryId, balances }
       })
 
       const categoryId = input.categoryId ?? tx.oldCategoryId ?? undefined
@@ -181,13 +190,17 @@ export const transactionRouter = createTRPCRouter({
         checkBudgetAlerts(ctx.session.user.id, categoryId)
           .catch((err) => console.error('[budget] Alert check failed:', err))
       }
+      for (const { walletId, balance } of tx.balances) {
+        checkLowBalance(walletId, balance)
+          .catch((err) => console.error('[lowBalance] Check failed:', err))
+      }
       return tx.updated
     }),
 
   delete: protectedProcedure
     .input(z.object({ id: z.string(), }))
     .mutation(async ({ ctx, input, }) => {
-      const { type, categoryId } = await ctx.db.$transaction(async (prisma) => {
+      const { type, categoryId, walletId, walletBalance } = await ctx.db.$transaction(async (prisma) => {
         const old = await prisma.transaction.findUniqueOrThrow({ where: { id: input.id, userId: ctx.session.user.id, }, })
         const updatedWallet = await prisma.wallet.update({
           data: { balance: { increment: -getBalanceDelta(old.type, old.amount), }, },
@@ -199,11 +212,13 @@ export const transactionRouter = createTRPCRouter({
           where: { walletId: old.walletId },
         })
         await prisma.transaction.delete({ where: { id: input.id, }, })
-        return { type: old.type, categoryId: old.categoryId }
+        return { type: old.type, categoryId: old.categoryId, walletId: old.walletId, walletBalance: updatedWallet.balance }
       })
       if (type === 'EXPENSE' && categoryId) {
         checkBudgetAlerts(ctx.session.user.id, categoryId)
           .catch((err) => console.error('[budget] Alert check failed:', err))
       }
+      checkLowBalance(walletId, walletBalance)
+        .catch((err) => console.error('[lowBalance] Check failed:', err))
     }),
 })

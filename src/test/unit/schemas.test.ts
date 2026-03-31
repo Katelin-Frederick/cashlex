@@ -6,10 +6,12 @@ import { z } from 'zod'
 // verifies validation rules without needing to render UI.
 
 const walletSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(50),
-  type: z.enum(['CHECKING', 'SAVINGS', 'CREDIT', 'CASH', 'INVESTMENT']),
   balance: z.coerce.number(),
   currency: z.string().length(3),
+  lowBalanceAlert: z.boolean(),
+  lowBalanceThreshold: z.coerce.number().min(0),
+  name: z.string().min(1, 'Name is required').max(50),
+  type: z.enum(['CHECKING', 'SAVINGS', 'CREDIT', 'CASH', 'INVESTMENT']),
 })
 
 const categorySchema = z.object({
@@ -42,44 +44,57 @@ const budgetSchema = z.object({
 // ── Wallet schema ─────────────────────────────────────────────────────
 
 describe('walletSchema', () => {
+  const base = { balance: 1000, currency: 'USD', lowBalanceAlert: false, lowBalanceThreshold: 100, name: 'Chase', type: 'CHECKING' as const }
+
   it('accepts valid input', () => {
-    expect(() =>
-      walletSchema.parse({ name: 'Chase', type: 'CHECKING', balance: 1000, currency: 'USD' })
-    ).not.toThrow()
+    expect(() => walletSchema.parse(base)).not.toThrow()
   })
 
   it('rejects empty name', () => {
-    const result = walletSchema.safeParse({ name: '', type: 'CHECKING', balance: 0, currency: 'USD' })
-    expect(result.success).toBe(false)
+    expect(walletSchema.safeParse({ ...base, name: '' }).success).toBe(false)
   })
 
   it('rejects name longer than 50 characters', () => {
-    const result = walletSchema.safeParse({ name: 'a'.repeat(51), type: 'CHECKING', balance: 0, currency: 'USD' })
-    expect(result.success).toBe(false)
+    expect(walletSchema.safeParse({ ...base, name: 'a'.repeat(51) }).success).toBe(false)
   })
 
   it('rejects invalid wallet type', () => {
-    const result = walletSchema.safeParse({ name: 'Test', type: 'INVALID', balance: 0, currency: 'USD' })
-    expect(result.success).toBe(false)
+    expect(walletSchema.safeParse({ ...base, type: 'INVALID' }).success).toBe(false)
   })
 
   it('accepts all valid wallet types', () => {
     const types = ['CHECKING', 'SAVINGS', 'CREDIT', 'CASH', 'INVESTMENT'] as const
     for (const type of types) {
-      const result = walletSchema.safeParse({ name: 'Test', type, balance: 0, currency: 'USD' })
-      expect(result.success).toBe(true)
+      expect(walletSchema.safeParse({ ...base, type }).success).toBe(true)
     }
   })
 
   it('rejects currency codes that are not 3 characters', () => {
-    const result = walletSchema.safeParse({ name: 'Test', type: 'CHECKING', balance: 0, currency: 'US' })
-    expect(result.success).toBe(false)
+    expect(walletSchema.safeParse({ ...base, currency: 'US' }).success).toBe(false)
   })
 
   it('coerces balance string to number', () => {
-    const result = walletSchema.safeParse({ name: 'Test', type: 'CHECKING', balance: '500', currency: 'USD' })
+    const result = walletSchema.safeParse({ ...base, balance: '500' })
     expect(result.success).toBe(true)
     if (result.success) expect(result.data.balance).toBe(500)
+  })
+
+  it('rejects lowBalanceThreshold below 0', () => {
+    expect(walletSchema.safeParse({ ...base, lowBalanceThreshold: -1 }).success).toBe(false)
+  })
+
+  it('accepts lowBalanceThreshold of 0', () => {
+    expect(walletSchema.safeParse({ ...base, lowBalanceThreshold: 0 }).success).toBe(true)
+  })
+
+  it('accepts lowBalanceAlert: true', () => {
+    expect(walletSchema.safeParse({ ...base, lowBalanceAlert: true }).success).toBe(true)
+  })
+
+  it('coerces lowBalanceThreshold string to number', () => {
+    const result = walletSchema.safeParse({ ...base, lowBalanceThreshold: '250' })
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.lowBalanceThreshold).toBe(250)
   })
 })
 

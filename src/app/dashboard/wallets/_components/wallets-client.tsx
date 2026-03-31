@@ -37,7 +37,10 @@ import {
   DialogTitle,
   Dialog,
 } from '~/components/ui/dialog'
+import { AlertTriangle, } from 'lucide-react'
+
 import { CardContent, CardHeader, CardTitle, Card, } from '~/components/ui/card'
+import { Switch, } from '~/components/ui/switch'
 import { Button, } from '~/components/ui/button'
 import { Input, } from '~/components/ui/input'
 import { CURRENCIES, } from '~/lib/currencies'
@@ -69,10 +72,12 @@ const PAGE_SIZE = 9 // 3-column grid looks best with multiples of 3
 // ── Zod schema ───────────────────────────────────────────────────────
 
 const walletSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(50),
-  type: z.enum(['CHECKING', 'SAVINGS', 'CREDIT', 'CASH', 'INVESTMENT']),
   balance: z.coerce.number(),
   currency: z.string().length(3),
+  lowBalanceAlert: z.boolean(),
+  lowBalanceThreshold: z.coerce.number().min(0, 'Must be 0 or more'),
+  name: z.string().min(1, 'Name is required').max(50),
+  type: z.enum(['CHECKING', 'SAVINGS', 'CREDIT', 'CASH', 'INVESTMENT']),
 })
 
 type WalletFormValues = z.infer<typeof walletSchema>
@@ -196,6 +201,40 @@ const WalletForm = ({
           />
         )}
 
+        {/* Low balance alert — hide for CREDIT wallets */}
+        {form.watch('type') !== 'CREDIT' && (
+          <div className='rounded-lg border p-4 space-y-3'>
+            <FormField
+              control={form.control}
+              name='lowBalanceAlert'
+              render={({ field, }) => (
+                <div className='flex items-center justify-between'>
+                  <div>
+                    <p className='text-sm font-medium'>Low balance alert</p>
+                    <p className='text-muted-foreground text-xs'>Email me when balance drops below a threshold</p>
+                  </div>
+                  <Switch checked={field.value} onCheckedChange={field.onChange} />
+                </div>
+              )}
+            />
+            {form.watch('lowBalanceAlert') && (
+              <FormField
+                control={form.control}
+                name='lowBalanceThreshold'
+                render={({ field, }) => (
+                  <FormItem>
+                    <FormLabel>Alert threshold</FormLabel>
+                    <FormControl>
+                      <Input inputMode='decimal' placeholder='100' {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+          </div>
+        )}
+
         <div className='flex justify-end gap-2 pt-2'>
           <Button type='button' variant='outline' onClick={onCancel}>
             Cancel
@@ -212,12 +251,15 @@ const WalletForm = ({
 // ── Main client component ────────────────────────────────────────────
 
 type Wallet = {
-  id: string
-  name: string
-  type: WalletType
+  _count: { transactions: number }
   balance: number
   currency: string
-  _count: { transactions: number }
+  id: string
+  lowBalanceAlert: boolean
+  lowBalanceAlertSentAt: Date | null
+  lowBalanceThreshold: number
+  name: string
+  type: WalletType
 }
 
 export const WalletsClient = () => {
@@ -286,17 +328,22 @@ export const WalletsClient = () => {
       {/* Wallet grid */}
       <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 transition-opacity ${isFetching ? 'opacity-60' : ''}`}>
         {wallets.map((wallet) => (
-          <Card key={wallet.id}>
+          <Card key={wallet.id} className={(wallet as Wallet).lowBalanceAlertSentAt ? 'border-amber-400' : ''}>
             <CardHeader className='pb-2'>
               <div className='flex items-start justify-between'>
                 <CardTitle className='text-base'>{wallet.name}</CardTitle>
-                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${WALLET_TYPE_COLORS[wallet.type as WalletType]}`}>
-                  {WALLET_TYPE_LABELS[wallet.type as WalletType]}
-                </span>
+                <div className='flex items-center gap-1.5'>
+                  {(wallet as Wallet).lowBalanceAlertSentAt && (
+                    <AlertTriangle className='size-3.5 text-amber-500' />
+                  )}
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${WALLET_TYPE_COLORS[wallet.type as WalletType]}`}>
+                    {WALLET_TYPE_LABELS[wallet.type as WalletType]}
+                  </span>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
-              <p className='text-2xl font-bold'>
+              <p className={`text-2xl font-bold ${(wallet as Wallet).lowBalanceAlertSentAt ? 'text-amber-600' : ''}`}>
                 {formatBalance(wallet.balance, wallet.currency)}
               </p>
               <p className='text-muted-foreground mt-1 text-xs'>
@@ -362,7 +409,12 @@ export const WalletsClient = () => {
           <WalletForm
             showBalance
             defaultValues={{
-              name: '', type: 'CHECKING', balance: 0, currency: baseCurrency,
+              balance: 0,
+              currency: baseCurrency,
+              lowBalanceAlert: false,
+              lowBalanceThreshold: 100,
+              name: '',
+              type: 'CHECKING',
             }}
             isPending={create.isPending}
             submitLabel='Create'
@@ -382,15 +434,17 @@ export const WalletsClient = () => {
             <WalletForm
               showBalance={false}
               defaultValues={{
-                name: editWallet.name,
-                type: editWallet.type,
                 balance: editWallet.balance,
                 currency: editWallet.currency,
+                lowBalanceAlert: editWallet.lowBalanceAlert,
+                lowBalanceThreshold: editWallet.lowBalanceThreshold,
+                name: editWallet.name,
+                type: editWallet.type,
               }}
               isPending={update.isPending}
               submitLabel='Save changes'
               onCancel={() => setEditWallet(null)}
-              onSubmit={(values) => update.mutate({ id: editWallet.id, ...values, })}
+              onSubmit={(values) => update.mutate({ id: editWallet.id, currency: values.currency, lowBalanceAlert: values.lowBalanceAlert, lowBalanceThreshold: values.lowBalanceThreshold, name: values.name, type: values.type, })}
             />
           )}
         </DialogContent>
